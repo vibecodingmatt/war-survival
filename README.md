@@ -1,6 +1,6 @@
 # War: Survival
 
-**The Ember Gate — mobile update, v0.3.1**
+**The Ember Gate — mobile update, v0.3.2**
 
 Lead a blue rifle squad against the Crimson Legion on a ruined stone bridge above
 a jungle gorge. Beat **Level 1: Ashen Crossing** (617 enemies), then take on
@@ -19,7 +19,7 @@ Each starts with nine riflemen; beating Level 1 offers a Next Level button.
 | Fire rifles | Automatic | Automatic |
 | Recruit +1 | Move left, press 1, or click the left lane button | Move left or tap +1 Soldier |
 | Shoot enemies | Move to center, press 2, or click Hold the Line | Center or tap Hold the Line |
-| Upgrade guns | Move right, press 3, or click Bigger Guns | Move right or tap Bigger Guns |
+| Upgrade guns | Move right, press 3, or click Bigger Guns | Move right or tap the next weapon button |
 | Artillery barrage | Space or Artillery button | Artillery button |
 | Pause | Esc or pause button | Pause button |
 | Sound | Speaker button | Speaker button |
@@ -63,6 +63,9 @@ players and appear when a physical keyboard is used.
 - Phone controls use at least 44px touch targets, larger text, and screen inset
   spacing. Portrait, landscape, and tablet layouts keep the controls separate.
   Short phone screens use adjusted camera framing to keep the squad visible.
+- The next weapon, remaining damage, countdown, and progress appear inside the
+  right lane button on touch screens. The floating menu is hidden so it cannot
+  cover approaching weapon boards. The button reads Cannon for Siege Cannon.
 - Rotating during combat pauses the game and releases held movement. Tap
   Return to Battle after rotating; browser toolbar height changes do not pause.
 - Touch devices default to Balanced graphics: pixel ratio capped at 1, 1024px
@@ -72,7 +75,8 @@ players and appear when a physical keyboard is used.
 
 Mobile verification uses Chrome touch emulation at eight sizes from 320×568 to
 768×1024, including landscape and simulated notched-screen insets. It covers
-multi-touch artillery, drag release, rotation, text/labels, full-squad visibility,
+multi-touch artillery, drag release, rotation, text/labels, weapon readout clearance
+against the projected approaching board, full-squad visibility,
 and a complete Level 2 run. Physical iOS/Android performance is not benchmarked.
 
 ## Local development

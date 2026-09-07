@@ -33,6 +33,29 @@ async function layout(page){
   assert.equal(overlaps(boxes.lanes,boxes.artillery),false,'lane buttons stay clear of artillery');
   return boxes;
 }
+async function weaponLaneClear(page){
+  const result=await page.evaluate(()=>{
+    const rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};
+    const overlaps=(a,b)=>Math.min(a.x+a.w,b.x+b.w)>Math.max(a.x,b.x)&&Math.min(a.y+a.h,b.y+b.h)>Math.max(a.y,b.y);
+    const readouts=[...document.querySelectorAll('.armory-hud,.weapon-lane-details')].filter(e=>e.getClientRects().length).map(rect);
+    const blocked=[];
+    // Project the full board as it approaches the squad, including bobbing and depth.
+    for(let z=-14;z<=window.__warTest.snapshot().z;z+=.5){
+      const points=[];
+      for(const x of [4.1,7])for(const y of [.455,4.545])for(const depth of [z-.15,z+.15])points.push(window.__warTest.screenPoint(x,y,depth));
+      const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+      const board={x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};
+      if(readouts.some(hud=>overlaps(hud,board)))blocked.push(z);
+    }
+    const button=rect(document.querySelector('[data-lane="weapons"]'));
+    const text=[...document.querySelectorAll('.weapon-lane-details strong,.weapon-lane-details small')].map(e=>{
+      const range=document.createRange();range.selectNodeContents(e);return rect(range);
+    });
+    return {blocked,button,text};
+  });
+  assert.deepEqual(result.blocked,[],'weapon readout leaves the approaching board path clear');
+  for(const r of result.text)assert.ok(r.x>=result.button.x&&r.x+r.w<=result.button.x+result.button.w&&r.y>=result.button.y&&r.y+r.h<=result.button.y+result.button.h,'weapon information fits inside its lane button');
+}
 (async()=>{
   const {strategy}=await import('./strategy.mjs');
   browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
@@ -97,7 +120,8 @@ async function layout(page){
     await layout(page);await touchCopy(page);
     await page.locator('[data-lane="weapons"]').tap();
     await page.waitForFunction(()=>window.__warTest.snapshot().focus==='weapons',null,{timeout:4000});
-    await page.waitForTimeout(150);await page.screenshot({path:path.join(output,width+'x'+height+'-battle.png')});
+    await page.waitForTimeout(1200);await weaponLaneClear(page);
+    await page.screenshot({path:path.join(output,width+'x'+height+'-battle.png')});
     await page.locator('#pause-button').tap();await touchCopy(page);
     await page.screenshot({path:path.join(output,width+'x'+height+'-pause.png')});
     await page.locator('#pause-panel [data-menu]').tap();
@@ -142,7 +166,10 @@ async function layout(page){
   await desktop.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});
   assert.match(await desktop.locator('#menu').innerText(),/W A S D/,'a narrow desktop keeps keyboard instructions');
   assert.equal((await desktop.evaluate(()=>window.__warTest.renderer())).quality,'high');
+  await desktop.locator('#start-button').click();
+  assert.equal(await desktop.locator('.armory-hud').isVisible(),true,'desktop retains the detailed weapon panel');
+  assert.equal(await desktop.locator('.weapon-lane-details').isVisible(),false);
   assert.deepEqual(errors,[],'no mobile browser errors or missing assets');
-  console.log('PASS: touch copy and labels, 44px targets, eight phone/tablet layouts, notched-screen insets, two-finger artillery, drag takeover/dead zone/release, rotation pause, quality defaults, full-squad visibility, Level 2 victory, and narrow desktop input hints.');
+  console.log('PASS: touch copy and labels, 44px targets, eight phone/tablet layouts, clear moving weapon lane, notched-screen insets, two-finger artillery, drag takeover/dead zone/release, rotation pause, quality defaults, full-squad visibility, Level 2 victory, and narrow desktop input hints.');
   await browser.close();
 })().catch(async error=>{console.error(error);await browser?.close();process.exitCode=1;});

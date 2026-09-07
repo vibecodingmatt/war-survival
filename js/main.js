@@ -25,6 +25,9 @@ function updateControls(touch=coarsePointer.matches){
   document.documentElement.classList.toggle('touch-layout',touch||coarsePointer.matches);
   $('control-hint').textContent=touch?'DRAG TO MOVE · TAP A LANE TO AIM':'WASD / ARROWS · MOVE     1 / 2 / 3 · AIM     SPACE · ARTILLERY     ESC · PAUSE';
   $('pause-button').title=touch?'Pause game':'Pause (Esc)';
+  const weaponButton=document.querySelector('[data-lane="weapons"]');
+  weaponButton.setAttribute('aria-label',touch?'Right lane: shoot for weapon upgrades':'Shoot right for weapon upgrades (3)');
+  weaponButton.setAttribute('aria-describedby',touch?'weapon-lane-name weapon-lane-status':'next-weapon weapon-remaining weapon-deadline');
   $('barrage-button').setAttribute('aria-label',touch?'Fire artillery barrage':'Fire artillery barrage (Space)');
   renderer?.domElement.setAttribute('aria-label',touch?'Battlefield. Drag to move. Tap a lane to aim. Tap Artillery to strike.':'Battlefield. Use WASD or arrow keys to move; Space for artillery.');
   if(changed&&!qualityManual)applyQuality(touch||coarsePointer.matches?'balanced':'high');
@@ -122,7 +125,12 @@ function updateHud(){
   const remaining=target?(SUPPLY_EXIT-target.z)/sim.levelData.weaponSpeed:0;
   $('weapon-deadline').textContent=target?'PASSES IN '+Math.ceil(remaining)+'s':p.weaponLevel===WEAPONS.length?'': 'ARRIVES IN '+Math.ceil(sim.weaponTimer)+'s';
   $('weapon-deadline').classList.toggle('urgent',!!target&&remaining<=5);
-  $('weapon-progress').style.width=(target?(1-target.hp/target.maxHp)*100:p.weaponLevel===WEAPONS.length?100:0)+'%';
+  const progress=(target?(1-target.hp/target.maxHp)*100:p.weaponLevel===WEAPONS.length?100:0)+'%';
+  $('weapon-progress').style.width=progress;
+  $('weapon-lane-name').textContent=p.weaponLevel===3?'CANNON':WEAPONS[p.weaponLevel]?.name||'MAXED';
+  $('weapon-lane-status').textContent=target?Math.ceil(target.hp).toLocaleString()+(compactTouch?' · ':' HP · ')+Math.ceil(remaining)+'s':p.weaponLevel===WEAPONS.length?'EQUIPPED':'IN '+Math.ceil(sim.weaponTimer)+'s';
+  $('weapon-lane-status').classList.toggle('urgent',!!target&&remaining<=5);
+  $('weapon-lane-progress').style.width=progress;
   $('kill-count').textContent=sim.kills;
   $('enemies-left').textContent=sim.enemies.length?sim.enemies.length+' enemies incoming':'Crossing secured';
   $('wave-label').innerHTML='WAVE '+String(sim.wave+1).padStart(2,'0')+' <span>/ 04</span>';

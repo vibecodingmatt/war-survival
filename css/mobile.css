@@ -34,6 +34,18 @@ html[data-input="touch"] .touch-only { display: block; }
 .touch-layout .armory-hud { backdrop-filter: none; background-color: #142a2ef5; }
 .touch-layout .primary-button:hover { transform: none; }
 
+/* Keep weapon information inside the existing dock, clear of moving targets. */
+.weapon-lane-details { display: none; }
+.touch-layout .armory-hud,
+.touch-layout [data-lane="weapons"] > strong,
+.touch-layout [data-lane="weapons"] > small { display: none; }
+.touch-layout .weapon-lane-details { display: block; }
+.touch-layout .weapon-lane-details strong,
+.touch-layout .weapon-lane-details small { white-space: nowrap; }
+.touch-layout .weapon-lane-details .urgent { color: #ffac87; }
+.weapon-lane-track { position: absolute; bottom: 4px; left: 6px; right: 6px; height: 2px; background: #07191e; }
+.weapon-lane-track i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .12s; }
+
 /* Portrait phones and tablets: a readable thumb dock, clear of browser chrome. */
 @media (max-width: 600px), (orientation: portrait) and (max-width: 1100px) {
   .touch-layout .topbar {
@@ -50,13 +62,6 @@ html[data-input="touch"] .touch-only { display: block; }
   .touch-layout .combat-stats .stat-caption { font-size: 8px; letter-spacing: .6px; }
   .touch-layout .combat-stats strong { font-size: 28px; }
   .touch-layout .combat-stats > span:last-child { font-size: 10px; }
-  .touch-layout .armory-hud { top: calc(119px + var(--safe-top)); right: max(12px, var(--safe-right)); width: 148px; padding: 10px; }
-  .touch-layout .armory-hud .stat-caption { font-size: 8px; letter-spacing: .2px; }
-  .touch-layout .armory-hud .stat-caption { display: block; line-height: 1.2; }
-  .touch-layout .armory-hud strong { font-size: 13px; margin: 6px 0; }
-  .touch-layout .armory-hud > span:nth-of-type(2) { font-size: 10px; }
-  .touch-layout #weapon-deadline { font-size: 10px; margin-top: 8px; letter-spacing: .2px; }
-  .touch-layout .armory-track { margin-top: 8px; }
   .touch-layout .boss-hud { top: calc(233px + var(--safe-top)); left: 50%; width: calc(100% - 32px); max-width: 420px; }
   .touch-layout .boss-hud > span { font-size: 9px; letter-spacing: 1px; }
   .touch-layout .bottom-hud {
@@ -113,9 +118,6 @@ html[data-input="touch"] .touch-only { display: block; }
   .touch-layout .level-select button { min-height: 65px; }
   .touch-layout .menu-controls { font-size: 11px; }
   .touch-layout .mission-facts { display: none; }
-  .touch-layout .armory-hud { padding: 8px 10px; width: 140px; }
-  .touch-layout .armory-hud .stat-caption { display: none; }
-  .touch-layout .armory-hud strong { margin: 2px 0 5px; }
   .touch-layout .boss-hud { top: calc(192px + var(--safe-top)); }
   .touch-layout .battle-banner { top: calc(228px + var(--safe-top)); padding: 6px 0; }
   .touch-layout .battle-banner strong { font-size: 18px; margin: 6px 0; }
@@ -147,10 +149,6 @@ html[data-input="touch"] .touch-only { display: block; }
   .touch-layout .combat-stats { top: calc(70px + var(--safe-top)); left: max(14px, var(--safe-left)); }
   .touch-layout .combat-stats strong { font-size: 25px; }
   .touch-layout .combat-stats > span:last-child { font-size: 10px; }
-  .touch-layout .armory-hud { top: calc(70px + var(--safe-top)); right: max(12px, var(--safe-right)); width: 143px; padding: 10px; }
-  .touch-layout .armory-hud .stat-caption { font-size: 7px; letter-spacing: .25px; }
-  .touch-layout .armory-hud strong { font-size: 12px; margin: 6px 0; }
-  .touch-layout #weapon-deadline { font-size: 9px; margin-top: 8px; }
   .touch-layout .boss-hud { top: calc(60px + var(--safe-top)); left: 50%; width: 34%; }
   .touch-layout .boss-hud > span { font-size: 8px; letter-spacing: .5px; }
   .touch-layout .bottom-hud { bottom: calc(10px + var(--safe-bottom)); left: max(12px, var(--safe-left)); right: max(12px, var(--safe-right)); }
