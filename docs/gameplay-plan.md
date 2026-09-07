@@ -15,19 +15,22 @@ The supplied local video is `references/gameplay/war-survival.mp4`, approximatel
 ## Implemented interpretation
 
 - A fixed bridge arena instead of an endless scrolling runner.
-- Direct squad movement with automatic targeting and firing.
+- Direct squad movement with automatic firing into a selected lane:
+  left recruit boards, central enemies, or the right weapon goal.
 - Four finite enemy formations, including armored troops, grenadiers, and a
   giant final commander.
 - A shared squad integrity meter; riflemen count represents firepower.
-- Blue recruit crates, three reinforcement choices between waves, and a
-  rechargeable artillery attack.
+- A continuously approaching stream of +1 boards, four weapon tiers earned by
+  shooting longer goals, and rechargeable artillery.
+- 617 enemies across four automatically advancing waves. Side targets trade
+  immediate defense for the firepower needed to survive later ranks.
 - Enemy ranged attacks and boss attacks use red warning circles that allow dodging.
 - Original geometry, animation, effects, and interface; CC0 surface textures
   add weathering and material detail.
 
-The short encounter is intentionally limited to one environment and one rifle
-weapon family. There is no campaign, persistent progression, multiplayer,
-endless runner, or additional weapon inventory in this iteration.
+The encounter remains limited to one environment. Volley rifles upgrade to
+repeaters, Gatlings, and splash-damage siege cannons during a run. There is no
+campaign, saved progression, multiplayer, or endless mode in this iteration.
 
 ## Useful playtest feedback
 

@@ -8,7 +8,8 @@ export function randomSource(seed = 731) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
-export function formation(index) {
-  const row = Math.floor(index / 3);
-  return { x: (index % 3 - 1) * 0.83 + (row % 2 ? 0.18 : 0), z: row * 0.84 - 0.7 };
+export function formation(index, count = 9) {
+  const columns = count > 30 ? 6 : count > 18 ? 5 : count > 12 ? 4 : 3;
+  const row = Math.floor(index / columns);
+  return { x: (index % columns - (columns - 1) / 2) * 0.69 + (row % 2 ? 0.09 : 0), z: row * 0.69 - 0.7 };
 }

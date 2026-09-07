@@ -2,19 +2,19 @@ import * as T from '../vendor/three.module.min.js';
 import { Simulation } from './core/simulation.js';
 import { createEnvironment } from './world/environment.js';
 import { createArmies } from './entities/army.js';
+import { createTargets } from './world/targets.js';
 import { createEffects } from './systems/effects.js';
 import { BattlefieldAudio } from './systems/audio.js';
-import { BARRAGE_COOLDOWN, MAX_SQUAD } from '../data/waves.js';
+import { BARRAGE_COOLDOWN, WEAPONS, LIMITS, MAX_SQUAD } from '../data/waves.js';
 import { clamp } from './core/math.js';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
 const audio=new BattlefieldAudio(),sim=new Simulation();
-let renderer,scene,camera,environment,armies,effects;
+let renderer,scene,camera,environment,armies,effects,targets;
 let previousTime=0,accumulator=0,worldTime=0,shake=0,flash=0,bannerTime=0,calloutTime=0,quality='high';
 let frames=0,frameTotal=0,metrics={fps:0,calls:0,triangles:0},modal=null;
 const keys=new Set(),pointer={active:false,id:null,x:0,y:0,dx:0,dz:0};
-const projected=new T.Vector3(),labels=new Map();
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isTouch=()=>matchMedia('(pointer: coarse)').matches;
 
@@ -28,7 +28,7 @@ function closeModal(id){show(id,false);if(modal===id)modal=null;}
 function callout(text,duration=3.5){$('callout').textContent=text;calloutTime=duration;$('callout').classList.add('visible');}
 function start(){
   audio.start().then(updateSound);sim.start();effects.reset();clearInput();
-  for(const id of ['menu','pause-panel','result-panel','upgrade-panel'])closeModal(id);
+  for(const id of ['menu','pause-panel','result-panel'])closeModal(id);
   show('hud');show('wave-hud');show('pause-button');bannerTime=0;calloutTime=0;shake=0;flash=0;
   $('banner').classList.remove('visible');$('callout').classList.remove('visible');
   renderer.domElement.focus();accumulator=0;processEvents();updateHud();
@@ -44,23 +44,20 @@ function processEvents(){
     if(e.type==='wave'){
       $('banner-kicker').textContent='WAVE '+String(e.index+1).padStart(2,'0')+' / 04';
       $('banner-title').textContent=e.name;$('banner-description').textContent=e.description;
-      $('banner').classList.add('visible');bannerTime=4.3;
+      $('banner').classList.add('visible');bannerTime=3.2;
     }
     if(e.type==='barrage')callout('ARTILLERY INBOUND',2);
-    if(e.type==='warning'||e.type==='supply')callout(e.text);
-    if(e.type==='recruit')callout(e.amount>0?'+'+e.amount+' RIFLEMEN — SQUAD REINFORCED':'SUPPLIES COLLECTED — +6 INTEGRITY',2.5);
+    if(e.type==='warning'||e.type==='regroup')callout(e.text);
+    if(e.type==='recruit')callout('+1 SOLDIER · '+sim.player.squad+' IN YOUR SQUAD',1.1);
+    if(e.type==='weapon'){callout(e.name+' UNLOCKED — NEW WEAPONS EQUIPPED',3.3);shake=Math.max(shake,.12);}
     if(e.type==='hurt'){flash=.6;shake=Math.max(shake,.12);}
     if(e.type==='explosion')shake=Math.max(shake,e.friendly?.18:.28);
     if(e.type==='death'&&e.boss)shake=.65;
-    if(e.type==='upgrade'){
-      $('upgrade-panel').querySelector('[data-upgrade="recruits"]').disabled=sim.player.squad>=MAX_SQUAD;
-      openModal('upgrade-panel');
-    }
     if(e.type==='victory'||e.type==='defeat'){
       const won=e.type==='victory';
       $('result-kicker').textContent=won?'MISSION COMPLETE':'SQUAD OVERRUN';
       $('result-title').textContent=won?'The crossing holds.':'A stand worth remembering.';
-      $('result-description').textContent=won?'The Crimson Warden has fallen. Your squad held the last bridge through the Borderlands.':'The Legion broke through. Recruit more riflemen, use your artillery, and keep moving out of incoming strikes.';
+      $('result-description').textContent=won?'The Crimson Warden has fallen. You recruited '+sim.recruited+' soldiers and reached '+WEAPONS[sim.player.weaponLevel-1].name+'.':'The Legion broke through. Shoot +1 targets on the left, unlock stronger guns on the right, and return to the center before enemies get close.';
       $('result-kills').textContent=sim.kills;
       $('result-time').textContent=Math.floor(sim.time/60)+':'+String(Math.floor(sim.time%60)).padStart(2,'0');
       $('result-health').textContent=Math.ceil(sim.player.health);
@@ -72,7 +69,17 @@ function updateHud(){
   const p=sim.player;
   $('squad-count').textContent=p.squad;$('health-number').textContent=Math.ceil(p.health);
   $('health-fill').style.width=p.health+'%';$('health-fill').classList.toggle('low',p.health<35);
-  $('weapon-name').textContent='MK '+['I','II','III','IV'][Math.min(3,p.weaponLevel-1)]+' · VOLLEY RIFLES';
+  $('weapon-name').textContent='MK '+['I','II','III','IV'][p.weaponLevel-1]+' · '+WEAPONS[p.weaponLevel-1].name;
+  document.querySelectorAll('[data-lane]').forEach(button=>{
+    button.classList.toggle('active',button.dataset.lane===sim.focus);
+    button.setAttribute('aria-pressed',String(button.dataset.lane===sim.focus));
+  });
+  document.querySelector('[data-lane="recruits"] small').textContent=p.squad>=MAX_SQUAD?'SQUAD FULL · '+MAX_SQUAD:'SHOOT LEFT';
+  document.querySelector('[data-lane="weapons"] small').textContent=sim.armory?'SHOOT RIGHT':'FULLY UPGRADED';
+  const target=sim.armory;
+  $('next-weapon').textContent=target?WEAPONS[target.level-1].name:'MAX FIREPOWER';
+  $('weapon-remaining').textContent=target?Math.ceil(target.hp).toLocaleString()+' damage to unlock':'ALL WEAPONS EQUIPPED';
+  $('weapon-progress').style.width=(target?(1-target.hp/target.maxHp)*100:100)+'%';
   $('kill-count').textContent=sim.kills;
   $('enemies-left').textContent=sim.enemies.length?sim.enemies.length+' enemies incoming':'Crossing secured';
   $('wave-label').innerHTML='WAVE '+String(sim.wave+1).padStart(2,'0')+' <span>/ 04</span>';
@@ -84,22 +91,11 @@ function updateHud(){
   const boss=sim.enemies.find(e=>e.type==='boss');show('boss-hud',!!boss&&sim.state!=='menu');
   if(boss)$('boss-fill').style.width=(boss.hp/boss.maxHp)*100+'%';
 }
-function updateLabels(){
-  const ids=new Set(sim.pickups.map(p=>p.id));
-  for(const [id,el] of labels)if(!ids.has(id)){el.remove();labels.delete(id);}
-  for(const pickup of sim.pickups){
-    let label=labels.get(pickup.id);
-    if(!label){label=document.createElement('div');label.className='world-label';label.textContent='+2 RECRUITS';$('world-labels').append(label);labels.set(pickup.id,label);}
-    projected.set(pickup.x,2,pickup.z).project(camera);
-    label.style.left=(projected.x*.5+.5)*innerWidth+'px';label.style.top=(-projected.y*.5+.5)*innerHeight+'px';
-    label.style.display=projected.z>1?'none':'block';
-  }
-}
 function resize(){
   const portrait=innerWidth/innerHeight<.8;
   camera.aspect=innerWidth/innerHeight;camera.fov=portrait?54:49;camera.updateProjectionMatrix();
   renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?1.6:1));renderer.setSize(innerWidth,innerHeight);
-  if(isTouch())$('control-hint').textContent='DRAG TO MOVE · AUTO-FIRE · TAP ARTILLERY';
+  if(isTouch())$('control-hint').textContent='DRAG TO MOVE · TAP A LANE TO FOCUS FIRE';
 }
 function inputState(){
   return {x:(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+pointer.dx,
@@ -118,7 +114,7 @@ function frame(timestamp){
   }else accumulator=0;
   processEvents();
   const visualDt=animating?dt:0;
-  environment.update(worldTime);armies.update(sim,worldTime);effects.update(sim,visualDt,worldTime,camera);
+  environment.update(worldTime);armies.update(sim,worldTime);effects.update(sim,visualDt,worldTime,camera);targets.update(sim,worldTime);
   if(bannerTime>0){bannerTime-=visualDt;if(bannerTime<=0)$('banner').classList.remove('visible');}
   if(calloutTime>0){calloutTime-=visualDt;if(calloutTime<=0)$('callout').classList.remove('visible');}
   shake=Math.max(0,shake-dt*.8);flash=Math.max(0,flash-dt*2);$('damage-flash').style.opacity=flash;
@@ -130,7 +126,6 @@ function frame(timestamp){
   camera.position.y+=(targetY-camera.position.y)*smooth;camera.position.z+=(targetZ-camera.position.z)*smooth;
   camera.lookAt(menu&&!portrait?-8:sim.player.x*.08,1,(portrait?0:-3)+(sim.player.z-11)*.25);
   if(!reducedMotion&&shake>0){camera.position.x+=Math.sin(worldTime*97)*shake*.22;camera.position.y+=Math.cos(worldTime*79)*shake*.22;}
-  updateLabels();
   if(frames%5===0)updateHud();
   renderer.render(scene,camera);
   frames++;frameTotal+=dt;
@@ -145,15 +140,15 @@ async function boot(){
     $('viewport').append(renderer.domElement);
     renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();if(sim.state==='active')sim.pause();error('The graphics connection was interrupted. Reload to return to Ashen Crossing.');});
     scene=new T.Scene();camera=new T.PerspectiveCamera(49,innerWidth/innerHeight,.3,450);camera.position.set(-9,25,38);
-    environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);resize();updateSound();
-    armies.update(sim,0);effects.update(sim,0,0);environment.update(0);
+    environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);targets=createTargets(scene);resize();updateSound();
+    armies.update(sim,0);effects.update(sim,0,0);environment.update(0);targets.update(sim,0);
     await renderer.compileAsync(scene,camera);
     show('loading',false);show('menu');requestAnimationFrame(t=>{previousTime=t;frame(t);});
     if(new URLSearchParams(location.search).has('test')){
       window.__warTest={
         ready:true,snapshot:()=>({...sim.snapshot(),metrics}),
         step:(seconds,input={})=>{for(let t=0;t<seconds;t+=1/60){sim.tick(1/60,input);processEvents();}updateHud();return sim.snapshot();},
-        place:(x,z)=>{sim.player.x=clamp(x,-4.6,4.6);sim.player.z=clamp(z,3,16);},
+        place:(x,z)=>{sim.player.x=clamp(x,LIMITS.minX,LIMITS.maxX);sim.player.z=clamp(z,LIMITS.minZ,LIMITS.maxZ);},
         wave:index=>{sim.beginWave(clamp(index,0,3));processEvents();},
         damage:amount=>{sim.hurt(amount);},
         clear:()=>{for(const e of sim.enemies)sim.damage(e,e.hp+1,false);},
@@ -171,7 +166,7 @@ $('quality-button').addEventListener('click',()=>{
   environment.sun.shadow.mapSize.setScalar(quality==='high'?2048:1024);
   environment.sun.shadow.map?.dispose();environment.sun.shadow.map=null;resize();
 });
-document.querySelectorAll('[data-upgrade]').forEach(button=>button.addEventListener('click',()=>{if(sim.upgrade(button.dataset.upgrade)){closeModal('upgrade-panel');renderer.domElement.focus();processEvents();}}));
+document.querySelectorAll('[data-lane]').forEach(button=>button.addEventListener('click',()=>{sim.selectLane(button.dataset.lane);renderer.domElement.focus();}));
 addEventListener('resize',()=>{if(renderer)resize();});
 addEventListener('keydown',event=>{
   if(event.code==='Escape'&&!event.repeat){if(sim.state==='active'||sim.state==='paused')togglePause();return;}
@@ -181,6 +176,7 @@ addEventListener('keydown',event=>{
     else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
   }
   if(sim.state!=='active')return;
+  if(['Digit1','Digit2','Digit3'].includes(event.code)){event.preventDefault();sim.selectLane(['recruits','enemies','weapons'][Number(event.code.slice(-1))-1]);return;}
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD'].includes(event.code)){event.preventDefault();keys.add(event.code);}
 });
 addEventListener('keyup',event=>keys.delete(event.code));

@@ -5,18 +5,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright-core');
 const base=process.env.TEST_URL||'http://127.0.0.1:4173/war-survival/';
 const output=path.resolve('test-results');fs.mkdirSync(output,{recursive:true});
 const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe';
-function chooseInput(s){
-  const choices=[];
-  for(const x of [-4,0,4])for(const z of [4,9,15]){
-    let score=Math.hypot(x-s.x,z-s.z)*.2;
-    for(const zone of s.zones)if(!zone.friendly&&Math.hypot(x-zone.x,z-zone.z)<zone.radius+1)score+=20;
-    if(s.pickups[0])score+=Math.hypot(x-s.pickups[0].x,z-s.pickups[0].z)*.4;
-    choices.push({x,z,score});
-  }
-  choices.sort((a,b)=>a.score-b.score);
-  return {x:Math.max(-1,Math.min(1,(choices[0].x-s.x)*2)),z:Math.max(-1,Math.min(1,(choices[0].z-s.z)*2)),barrage:true};
-}
 (async()=>{
+ const {strategy:chooseInput}=await import('./strategy.mjs');
  const browser=await chromium.launch({executablePath,headless:true});
  const errors=[];
  const context=await browser.newContext({viewport:{width:1440,height:900}});
@@ -41,27 +31,40 @@ function chooseInput(s){
  await page.locator('#barrage-button').click();assert.ok((await page.evaluate(()=>window.__warTest.snapshot())).cooldown>0,'artillery fired');
  await page.waitForTimeout(700);
  await page.screenshot({path:path.join(output,'desktop-artillery.png')});
+ await page.locator('[data-lane="recruits"]').click();
+ await page.waitForFunction(()=>window.__warTest.snapshot().squad>=13,null,{timeout:10000});
+ state=await page.evaluate(()=>window.__warTest.snapshot());
+ assert.equal(state.focus,'recruits');assert.ok(state.shots.recruits>0);
+ await page.screenshot({path:path.join(output,'desktop-recruits.png')});
+ await page.keyboard.press('Digit3');
+ await page.waitForFunction(()=>window.__warTest.snapshot().weaponLevel===2,null,{timeout:12000});
+ await page.waitForTimeout(1000);
+ assert.equal(await page.locator('[data-lane="weapons"]').getAttribute('aria-pressed'),'true');
+ await page.screenshot({path:path.join(output,'desktop-repeater.png')});
+ await page.keyboard.press('Digit2');await page.waitForTimeout(1200);
+ const partial=await page.evaluate(()=>window.__warTest.snapshot().armory.hp);
+ assert.ok(partial<2800,'next weapon goal takes damage');
+ await page.waitForTimeout(400);
+ assert.equal(await page.evaluate(()=>window.__warTest.snapshot().armory.hp),partial,'partial weapon progress persists in center lane');
  // Complete an encounter through the actual combat model with a deterministic tactical input policy.
  await page.keyboard.press('Escape');await page.locator('#restart-button').click();
- let observedBoss=false,observedUpgrade=false,maxBullets=0,maxCorpses=0;
+ let observedBoss=false,observedUpgrade=false,maxBullets=0,maxCorpses=0,seenLevel=1;
  for(let i=0;i<1100;i++){
    state=await page.evaluate(()=>window.__warTest.snapshot());
    maxBullets=Math.max(maxBullets,state.bullets);maxCorpses=Math.max(maxCorpses,state.corpses);
    if(state.state==='victory'||state.state==='defeat')break;
-   if(state.state==='upgrade'){
-     observedUpgrade=true;await page.screenshot({path:path.join(output,'desktop-upgrades.png')});
-     await page.locator('[data-upgrade="'+(state.health<58?'repair':'damage')+'"]').click();continue;
-   }
+   if(state.weaponLevel>seenLevel){observedUpgrade=true;seenLevel=state.weaponLevel;await page.waitForTimeout(50);await page.screenshot({path:path.join(output,'desktop-weapon-'+seenLevel+'.png')});}
    if(state.wave===4&&!observedBoss){
      observedBoss=true;
-     await page.evaluate(()=>window.__warTest.step(2,{x:-1,barrage:true}));
+     await page.evaluate(input=>window.__warTest.step(.5,input),chooseInput(state));
      await page.waitForTimeout(250);await page.screenshot({path:path.join(output,'desktop-boss.png')});
    }
    await page.evaluate(input=>window.__warTest.step(.15,input),chooseInput(state));
    if(i%40===0)await page.waitForTimeout(20);
  }
  assert.equal(state.state,'victory','tactical play can win a complete encounter');
- assert.ok(observedBoss&&observedUpgrade);assert.ok(maxBullets<=220&&maxCorpses<=64);
+ assert.ok(observedBoss&&observedUpgrade);assert.ok(maxBullets<=360&&maxCorpses<=72);
+ assert.equal(state.weaponLevel,4);assert.ok(state.recruited>=20);assert.ok(state.kills>600);
  await page.screenshot({path:path.join(output,'desktop-victory.png')});
  console.log('Full encounter:',state);
  await page.locator('#replay-button').click();
@@ -94,8 +97,14 @@ function chooseInput(s){
  await mobile.locator('#pause-button').tap();assert.equal((await mobile.evaluate(()=>window.__warTest.snapshot())).state,'paused');
  await mobile.locator('#resume-button').tap();
  assert.equal((await mobile.evaluate(()=>window.__warTest.snapshot())).state,'active');
+ await mobile.locator('[data-lane="recruits"]').tap();
+ await mobile.waitForFunction(()=>window.__warTest.snapshot().squad>=11,null,{timeout:10000});
+ await mobile.screenshot({path:path.join(output,'mobile-recruits.png')});
+ await mobile.locator('[data-lane="weapons"]').tap();
+ await mobile.waitForFunction(()=>window.__warTest.snapshot().weaponLevel===2,null,{timeout:12000});
+ await mobile.screenshot({path:path.join(output,'mobile-weapon.png')});
  assert.deepEqual(errors,[],'no browser errors or missing assets');
  console.log('Mobile:',await mobile.evaluate(()=>window.__warTest.snapshot()));
- console.log('PASS: keyboard, mouse, touch, pause, artillery, upgrades, complete win, defeat, restart, audio, and project-path hosting.');
+ console.log('PASS: keyboard, mouse, touch, three firing lanes, +1 targets, persistent weapon goals, all weapon tiers, pause, artillery, complete win, defeat, restart, audio, and project-path hosting.');
  await browser.close();
 })().catch(error=>{console.error(error);process.exitCode=1;});
