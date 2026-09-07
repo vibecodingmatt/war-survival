@@ -1,9 +1,12 @@
 import * as T from '../../vendor/three.module.min.js';
-import { WORLDS } from '../../data/campaign.js?v=0.4.0';
-import { randomSource } from '../core/math.js?v=0.4.0';
+import { createWaterfalls } from './waterfalls.js?v=0.4.1';
+import { createVolcano } from './volcano.js?v=0.4.1';
+import { WORLDS } from '../../data/campaign.js?v=0.4.1';
+import { randomSource } from '../core/math.js?v=0.4.1';
 
 // Rebuild only the selected biome. Shared batches keep the mobile draw count bounded.
 export function createAmbience(scene,surfaces){
+  let volcanoUpdate=null;
   let root=null,profile=WORLDS[0],level=-1,weather=null,origins=null,mist=[],floaters=[],timeUniform={value:0};
   const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d');
   const gradient=ctx.createRadialGradient(64,64,0,64,64,64);gradient.addColorStop(0,'#ffffff88');gradient.addColorStop(.45,'#ffffff44');gradient.addColorStop(1,'#ffffff00');ctx.fillStyle=gradient;ctx.fillRect(0,0,128,128);
@@ -11,7 +14,7 @@ export function createAmbience(scene,surfaces){
   function setLevel(index){
     if(index===level)return;level=index;profile=WORLDS[index];
     if(root){scene.remove(root);const geometries=new Set(),materials=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}
-    root=new T.Group();scene.add(root);mist=[];floaters=[];
+    root=new T.Group();scene.add(root);mist=[];floaters=[];volcanoUpdate=null;
     const random=randomSource(741+index*139),range=(a,b)=>a+random()*(b-a);
     const mats={
       stone:new T.MeshStandardMaterial({color:profile.stone,map:surfaces.color,normalMap:surfaces.normal,normalScale:new T.Vector2(.5,.5),roughness:.86,metalness:.12}),
@@ -71,11 +74,7 @@ export function createAmbience(scene,surfaces){
         for(let j=0;j<4;j++)put('tube','leaf',[x+(j-1.5)*1.1,y-1,z+3.7],[.07,3+random()*3,.07],[0,0,.15]);
       }
     }
-    if(profile.landmark==='volcano'){
-      put('cone','dark',[-35,6,-94],[32,53,32]);put('cone','stone',[43,1,-124],[39,63,39]);
-      put('orb','glow',[-35,27,-94],[7,.9,7]);
-      for(let i=0;i<9;i++)put('box','glow',[-35+i*.6,24-i*3,-88+i*1.5],[.8,4,.3],[0,0,-.17]);
-    }
+    if(profile.landmark==='volcano')put('cone','stone',[43,1,-124],[39,63,39]);
     if(profile.landmark==='islands'){
       put('ring','gold',[0,21,-101],[17,17,17]);put('ring','glow',[0,21,-100.8],[15.8,15.8,15.8]);put('orb','dark',[0,24,-115],[11,11,2]);
       for(let i=0;i<12;i++){const a=i/12*Math.PI*2;put('pyramid','glow',[Math.cos(a)*19,21+Math.sin(a)*19,-101],[1.1,2.3,1.1],[0,0,a-Math.PI/2]);}
@@ -92,16 +91,8 @@ export function createAmbience(scene,surfaces){
     // Dispose unused resources too: switching sectors does not accumulate GPU allocations.
     const usedG=new Set([...batches.values()].map(b=>geometries[b.shape])),usedM=new Set([...batches.values()].map(b=>mats[b.material]));
     for(const g of Object.values(geometries))if(!usedG.has(g))g.dispose();for(const m of Object.values(mats))if(!usedM.has(m))m.dispose();
-    if(profile.landmark==='falls'){
-      const material=new T.ShaderMaterial({side:T.DoubleSide,transparent:true,depthWrite:false,uniforms:{time:wind,tint:{value:new T.Color(profile.water)}},
-        vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader:'varying vec2 v;uniform float time;uniform vec3 tint;float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+1.),f.x),f.y);}void main(){float a=n(vec2(v.x*9.,v.y*3.+time*2.));float b=n(vec2(v.x*27.+a,v.y*10.+time*5.));float edge=smoothstep(.015,.17,v.x+.04*a)*(1.-smoothstep(.83,.985,v.x-.04*a));float foam=.4*a+.3*b;vec3 c=mix(tint,vec3(.88,.96,.96),.55+foam);gl_FragColor=vec4(c,edge*(.48+foam)*smoothstep(0.,.04,v.y));}'});
-      const geometry=new T.PlaneGeometry(5.5,34);
-      for(const side of [-1,1])for(let i=0;i<(index===2?3:2);i++){const fall=new T.Mesh(geometry,material);fall.position.set(side*(17+i*2),-12,8-i*32+(side>0?-12:0));fall.rotation.y=-side*.18;root.add(fall);}
-      if(index===2){
-        for(let i=0;i<6;i++){const rainbow=new T.Mesh(new T.TorusGeometry(10+i*.18,.1,4,48,Math.PI),new T.MeshBasicMaterial({color:new T.Color().setHSL(i/8,.7,.7),transparent:true,opacity:.18,depthWrite:false}));rainbow.position.set(-19,-6,-22);rainbow.rotation.y=.15;root.add(rainbow);}
-      }
-    }
+    if(profile.landmark==='falls')createWaterfalls(root,surfaces,profile,wind,cloudMap);
+    if(profile.landmark==='volcano')volcanoUpdate=createVolcano(root,surfaces,wind,cloudMap);
     if(profile.biome==='ice'){
       const material=new T.ShaderMaterial({side:T.DoubleSide,transparent:true,depthWrite:false,blending:T.AdditiveBlending,uniforms:{time:wind},
         vertexShader:'varying vec2 v;uniform float time;void main(){v=uv;vec3 p=position;p.z+=sin(p.x*.035+time*.3)*8.;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}',
@@ -122,7 +113,7 @@ export function createAmbience(scene,surfaces){
     weather=rain?new T.LineSegments(geometry,new T.LineBasicMaterial({color:0xbadcea,transparent:true,opacity:.24,depthWrite:false})):new T.Points(geometry,new T.PointsMaterial({color:profile.weather==='snow'?'#eefbff':profile.accent,size:['snow','petals','fireflies','stars'].includes(profile.weather)?.16:.07,map:cloudMap,transparent:true,opacity:.8,depthWrite:false,blending:['fireflies','stars','embers'].includes(profile.weather)?T.AdditiveBlending:T.NormalBlending}));root.add(weather);
   }
   return {setLevel,update(time,reduced=false){
-    if(!root)return;const t=reduced?time*.15:time;timeUniform.value=t;
+    if(!root)return;const t=reduced?time*.15:time;timeUniform.value=t;volcanoUpdate?.(t);
     for(const f of mist){f.mesh.position.x=f.x+Math.sin(t*.11+f.phase)*3;f.mesh.position.y=f.y+Math.sin(t*.15+f.phase)*.5;}
     for(const f of floaters){f.mesh.position.set(f.x+Math.sin(t*.22+f.phase)*.8,f.y+Math.sin(t*.6+f.phase)*.8,f.z);f.mesh.rotation.y=t*.12+f.phase;}
     const p=weather.geometry.attributes.position.array,w=profile.weather,fall=['rain','storm','snow','petals','sand'].includes(w),speed=w==='storm'?17:w==='rain'?11:w==='snow'?1.2:2;

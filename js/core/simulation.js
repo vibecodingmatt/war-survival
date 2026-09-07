@@ -1,6 +1,6 @@
-import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.4.0';
-import { clamp, randomSource, formation } from './math.js?v=0.4.0';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.0';
+import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.4.1';
+import { clamp, randomSource, formation } from './math.js?v=0.4.1';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.1';
 
 export class Simulation {
   constructor(seed = 731) { this.seed = seed; this.reset(); this.preview(); }
@@ -23,6 +23,8 @@ export class Simulation {
     this.weaponTimer = 0; this.missedWeapons = 0; this.casualties = 0; this.casualtyDamage = 0;
     this.pods=[];this.podTimer=12;this.podsOpened=0;this.cartsDestroyed=0;
     this.buffs={overdrive:0,rally:0};this.shield=0;
+    this.meleeHits=0;this.bossSwipes=0;
+    this.bossMaxHp=0;
   }
   preview() {
     for (let i = 0; i < 96; i++) this.spawnEnemy(i, { hp: 80, speed: 2 }, i === 88 ? 'boss' : 'soldier');
@@ -56,19 +58,25 @@ export class Simulation {
       const type = i >= wave.count - wave.grenadiers ? 'grenadier' : i < wave.brutes ? 'brute' : this.level>=2&&i%47===24?'cart':'soldier';
       this.spawnEnemy(i, wave, type);
     }
-    if (wave.boss) this.spawnEnemy(wave.count, wave, 'boss');
+    if (wave.boss) for(let i=0;i<(wave.bossCount||1);i++) {
+      this.spawnEnemy(wave.count, {...wave,bossType:i?wave.partnerType:wave.bossType}, 'boss');
+      const boss=this.enemies.at(-1);boss.x=wave.bossCount>1?(i?2.8:-2.8):0;
+      boss.z=this.level>=2?(wave.mini?-36-i*7:-29):-38;boss.meleeCooldown=i*.8;
+    }
+    this.bossMaxHp=this.enemies.filter(e=>e.type==='boss').reduce((sum,e)=>sum+e.maxHp,0);
     this.events.push({ type: 'wave', index, name: wave.name, description: wave.description });
   }
   spawnEnemy(index, wave, type = 'soldier') {
-    const boss = type === 'boss', brute = type === 'brute', hp = boss ? this.levelData.bossHp*(wave.mini?.32:1) : wave.hp * (brute ? 2.3 : type==='cart'?.6:1);
+    const boss = type === 'boss', brute = type === 'brute', hp = boss ? this.levelData.bossHp*(wave.bossHpScale??(wave.mini?.32:1)) : wave.hp * (brute ? 2.3 : type==='cart'?.6:1);
     this.enemies.push({
       id: this.nextId++, type, x: boss ? 0 : (index % 9 - 4) * .94 + (this.random() - .5) * .14,
       z: boss ? -38 : -26 - Math.floor(index / 9) * 1.62,
-      y: 0, hp, maxHp: hp, reserved: 0, speed: wave.speed * (boss ? .55 : brute ? .91 : .96 + this.random() * .08),
+      y: 0, hp, maxHp: hp, reserved: 0, speed: boss && this.level>=2 ? (wave.mini?3+this.level*.08:3.5+this.level*.13) : wave.speed * (boss ? .55 : brute ? .91 : .96 + this.random() * .08),
       scale: boss ? (wave.mini?2.6:3.7) : brute ? 1.25 : .84 + this.random() * .09,
       bossType:wave.bossType||this.levelData.world.boss,mini:!!wave.mini,slow:0,burn:0,burnDamage:0,
       phase: this.random() * Math.PI * 2, yaw: Math.PI, attackTimer: this.random() * 3 + 5,
       hit: 0, vx: 0, vz: 0, knockback: 0,
+      meleeCooldown:0,swing:0,recovery:0,
     });
   }
   pause() {
@@ -150,21 +158,35 @@ export class Simulation {
       if(enemy.hp<=0)continue;
       enemy.slow=Math.max(0,enemy.slow-dt);
       const dx = p.x - enemy.x, dz = p.z - enemy.z, near = dz < 9;
-      const speed = enemy.speed * (enemy.knockback > 0 ? -.5 : 1)*(enemy.slow>0?.52:1);
+      const boss=enemy.type==='boss';
+      enemy.meleeCooldown=Math.max(0,enemy.meleeCooldown-dt);enemy.swing=Math.max(0,enemy.swing-dt);enemy.recovery=Math.max(0,enemy.recovery-dt);
+      const speed = enemy.speed * (enemy.knockback > 0 ? -.5 : 1)*(enemy.slow>0?(boss?.82:.52):1);
       enemy.knockback = Math.max(0, enemy.knockback - dt);
       enemy.vx = clamp(dx * (near ? .48 : .009), -1.5, 1.5); enemy.vz = speed;
-      if (enemy.type === 'boss' && enemy.z > -9) enemy.vz = 0;
+      if (boss) {
+        enemy.vx=clamp(dx*.65,-2.1,2.1);
+        enemy.vz=this.level<2?(enemy.z>-9?0:speed):Math.min(speed,Math.max(-2,(dz-3.4)*2));
+        if(enemy.swing>0||enemy.recovery>0)enemy.vx=enemy.vz=0;
+      }
       enemy.x = clamp(enemy.x + enemy.vx * dt, -5.4, 5.4); enemy.z += enemy.vz * dt;
       enemy.yaw = Math.PI + Math.atan2(enemy.vx, Math.max(.5, Math.abs(enemy.vz)));
+      if(boss)enemy.yaw=Math.PI-Math.atan2(dx,dz);
       enemy.phase += dt * Math.abs(speed) * 3.2;
       if (enemy.type === 'boss') {
-        if(enemy.attackTimer<=0){enemy.attackTimer=this.waveTime>65?3.2:enemy.hp<enemy.maxHp*.45?4.2:6;this.bossAttack(enemy);}
+        if(this.level>=2&&Math.abs(dz)<6&&Math.abs(dx)<5&&enemy.meleeCooldown<=0){
+          const fuse=1.05, radius=enemy.mini?3.8:4.6;
+          enemy.swing=fuse;enemy.recovery=fuse+.45;enemy.meleeCooldown=3.8;
+          this.bossSwipes++;
+          this.zones.push({id:this.nextId++,x:p.x,z:p.z,radius,remaining:fuse,total:fuse,friendly:false,damage:enemy.mini?10+this.level:15+this.level,melee:true,owner:enemy});
+          this.events.push({type:'warning',text:enemy.mini?'CHAMPION SWIPE · FALL BACK':'GUARDIAN SWIPE · MOVE!'});
+        }
+        if(enemy.attackTimer<=0&&enemy.swing<=0){enemy.attackTimer=this.waveTime>65?3.2:enemy.hp<enemy.maxHp*.45?4.8:7;this.bossAttack(enemy);}
       } else if (enemy.type === 'grenadier' && dz < 37 && enemy.attackTimer <= 0) {
         enemy.attackTimer = 10 + this.random() * 3;
         this.zones.push({ id: this.nextId++, x: p.x, z: p.z, radius: 1.8, remaining: 2, total: 2, friendly: false, damage: 9 });
       }
       if (Math.hypot(dx, dz) < 1.8 * enemy.scale && enemy.type !== 'boss' && enemy.attackTimer <= 0) {
-        this.hurt(enemy.type === 'brute' ? 9 : 4); enemy.attackTimer = 1.25; enemy.knockback = .2;
+        if(this.hurt(enemy.type === 'brute' ? 9 : 4))this.meleeHits++;enemy.attackTimer = 1.25; enemy.knockback = .2;
       }
       if (enemy.z > 22) { enemy.hp = 0; enemy.escaped = true; this.breaches++; this.hurt(enemy.type === 'brute' ? 8 : 4, true); }
     }
@@ -190,11 +212,14 @@ export class Simulation {
     }
     this.bullets = this.bullets.filter(b => !b.done);
     for (const zone of this.zones) {
+      if(zone.melee&&zone.owner.hp<=0){zone.done=true;continue;}
       zone.remaining -= dt; if (zone.remaining > 0 || zone.done) continue; zone.done = true;
       this.events.push({ type: 'explosion', x: zone.x, y: .2, z: zone.z, friendly: zone.friendly, radius: zone.radius });
       if (zone.friendly) {
         for (const enemy of this.enemies) if (Math.hypot(enemy.x - zone.x, enemy.z - zone.z) < zone.radius + enemy.scale * .3) this.damage(enemy, zone.damage, true);
-      } else if (Math.hypot(p.x - zone.x, p.z - zone.z) < zone.radius + .35) this.hurt(zone.damage);
+      } else if (Math.hypot(p.x - zone.x, p.z - zone.z) < zone.radius + (zone.melee?1.1:.35)) {
+        if(this.hurt(zone.damage)&&zone.melee)this.meleeHits++;
+      }
     }
     this.zones = this.zones.filter(z => !z.done);
     for (const enemy of this.enemies) {
@@ -324,9 +349,9 @@ export class Simulation {
     this.events.push({type:'warning',text:enragedNow?'GUARDIAN ENRAGED · ELITE REINFORCEMENTS':pattern==='sweep'?'SWEEPING STRIKE · KEEP MOVING':pattern==='summon'?'REINFORCEMENTS · WATCH THE IMPACT ZONES':'INCOMING IMPACT · MOVE OUT OF THE RED ZONES'});
   }
   hurt(amount, breach = false) {
-    if (this.state !== 'active' || (!breach && this.hurtCooldown > 0)) return;
+    if (this.state !== 'active' || (!breach && this.hurtCooldown > 0)) return false;
     const absorbed=Math.min(amount,this.shield);this.shield-=absorbed;amount-=absorbed;
-    if(amount<=0){this.hurtCooldown=.22;return;}
+    if(amount<=0){this.hurtCooldown=.22;return true;}
     this.player.health = Math.max(0, this.player.health - amount);
     this.casualtyDamage += amount;
     const losses = Math.min(this.player.squad - 1, Math.floor(this.casualtyDamage / 8));
@@ -344,6 +369,7 @@ export class Simulation {
     }
     if (!breach) this.hurtCooldown = .22;
     this.events.push({ type: 'hurt', amount });
+    return true;
   }
   finish(won) { this.state = won ? 'victory' : 'defeat'; this.bullets = []; this.zones = []; this.events.push({ type: this.state }); }
   drainEvents() { const events = this.events; this.events = []; return events; }
@@ -352,14 +378,14 @@ export class Simulation {
       squad: this.player.squad, weaponLevel: this.player.weaponLevel, weaponName: this.weapon.name,weaponId:this.weapon.id,weaponDps:this.weapon.damage/this.weapon.interval,
       shield:this.shield,buffs:{...this.buffs},podsOpened:this.podsOpened,cartsDestroyed:this.cartsDestroyed,
       focus: this.focus, recruited: this.recruited, breaches: this.breaches, shots: { ...this.shots },
-      casualties: this.casualties, fallen: this.fallen.length, missedWeapons: this.missedWeapons,
+      casualties: this.casualties, meleeHits:this.meleeHits, bossSwipes:this.bossSwipes, fallen: this.fallen.length, missedWeapons: this.missedWeapons,
       nextRecruits: this.recruitTimer, nextWeapon: this.weaponTimer,
       x: this.player.x, z: this.player.z, enemies: this.enemies.length,
       nearestEnemy: this.enemies.length ? Math.max(...this.enemies.map(e => e.z)) : -100,
       bullets: this.bullets.length, corpses: this.corpses.length, cooldown: this.barrageCooldown,
       armory: this.armory ? { hp: this.armory.hp, maxHp: this.armory.maxHp, z: this.armory.z, remaining: (SUPPLY_EXIT - this.armory.z) / this.levelData.weaponSpeed, level: this.armory.level, name: this.weapons[this.armory.level - 1].name } : null,
       recruits: this.recruits.filter(t => t.hp > 0).length,
-      zones: this.zones.map(z => ({ x: z.x, z: z.z, radius: z.radius, friendly: z.friendly, remaining: z.remaining })),
+      zones: this.zones.map(z => ({ x: z.x, z: z.z, radius: z.radius, friendly: z.friendly, remaining: z.remaining, melee:!!z.melee })),
       bossHealth: this.enemies.find(e => e.type === 'boss')?.hp || 0 };
   }
 }

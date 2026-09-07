@@ -125,7 +125,7 @@ test('ten sectors increase enemy pressure and use complete, distinct equipment r
   LEVELS.forEach((level,i)=>{
     assert.equal(level.weapons.length,4);level.weapons.forEach(w=>guns.add(w.id));
     if(i)for(let wave=0;wave<4;wave++)for(const stat of ['hp','count','speed'])assert.ok(level.waves[wave][stat]>LEVELS[i-1].waves[wave][stat],`sector ${i+1} wave ${wave+1}: ${stat}`);
-    if(i>=2)assert.equal(level.waves.filter(w=>w.boss).length,2);
+    if(i>=2){assert.equal(level.waves.filter(w=>w.boss).length,3);assert.equal(level.waves[1].bossCount,2);}
     assert.ok(BOSS_TYPES[level.world.boss]);
   });assert.equal(guns.size,10);
 });
@@ -172,4 +172,36 @@ test('prolonged boss waves enrage instead of permitting indefinite side-lane cam
   const sim=fresh();sim.start(4);sim.beginWave(3);const boss=sim.enemies.find(e=>e.type==='boss');sim.enemies=[boss];sim.waveTime=66;
   sim.bossAttack(boss);assert.equal(boss.enraged,true);assert.equal(sim.enemies.filter(e=>e.type==='brute').length,6);
   assert.ok(sim.drainEvents().some(e=>e.text?.includes('ENRAGED')));
+});
+
+test('later guardians advance past the old stopping line and telegraph lethal swipes',()=>{
+  const sim=fresh();sim.start(9);sim.beginWave(3);
+  const boss=sim.enemies.find(e=>e.type==='boss');sim.enemies=[boss];boss.attackTimer=99;boss.z=-9;
+  advance(sim,1);assert.ok(boss.z>-9);
+  boss.z=6;boss.x=sim.player.x;sim.player.squad=30;
+  advance(sim,.05);assert.ok(sim.zones.some(z=>z.melee&&z.owner===boss));
+  assert.equal(sim.player.health,100,'wind-up gives time to react');
+  advance(sim,1.1);assert.ok(sim.meleeHits>0);assert.ok(sim.player.health>0&&sim.player.health<100);assert.ok(sim.casualties>0);
+});
+
+test('a telegraphed swipe can be dodged or cancelled by killing its owner',()=>{
+  for(const dodge of [true,false]){
+    const sim=fresh();sim.start(9);sim.beginWave(3);const boss=sim.enemies.find(e=>e.type==='boss');
+    sim.enemies=[boss];boss.attackTimer=99;boss.z=6;advance(sim,.05);
+    assert.ok(sim.zones.some(z=>z.melee));
+    if(dodge)for(let i=0;i<70;i++){sim.tick(1/60,{z:-1});sim.drainEvents();}
+    else {sim.damage(boss,boss.hp+1,false);advance(sim,1.2);}
+    assert.equal(sim.player.health,100);assert.equal(sim.meleeHits,0);
+  }
+});
+
+test('paired champions have separate silhouettes and staggered approaches',()=>{
+  const sim=fresh();sim.start(5);sim.beginWave(1);const bosses=sim.enemies.filter(e=>e.type==='boss');
+  assert.equal(bosses.length,2);assert.notEqual(bosses[0].bossType,bosses[1].bossType);assert.notEqual(bosses[0].x,bosses[1].x);assert.notEqual(bosses[0].z,bosses[1].z);
+});
+
+test('a guardian cannot swipe a squad far behind it',()=>{
+  const sim=fresh();sim.start(9);sim.beginWave(3);const boss=sim.enemies.find(e=>e.type==='boss');
+  sim.enemies=[boss];boss.z=19;boss.attackTimer=99;sim.player.z=3;advance(sim,.1);
+  assert.equal(sim.bossSwipes,0);assert.ok(boss.vz<0,'turn and approach before swinging');
 });

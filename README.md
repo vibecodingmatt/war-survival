@@ -1,12 +1,13 @@
 # War: Survival
 
-**The Borderlands Campaign · v0.4.0**
+**The Borderlands Campaign · v0.4.1**
 
 A browser squad survival game with ten short, escalating levels. Recruit soldiers,
-catch moving weapon upgrades, and defeat each sector's guardian. Every level is
-available immediately for playtesting, starts with nine riflemen, and has four waves.
-Completed sectors are marked locally in your browser. Winning offers the next sector;
-beating the Sky Citadel completes the campaign.
+catch moving weapon upgrades, and defeat each sector's guardian. Every level starts
+with nine riflemen and has four waves. Beat a sector to unlock the next; completed
+sectors stay available for replay. A first-party cookie remembers victories for a
+year in this browser, and earlier saved wins migrate automatically. Beating the
+Sky Citadel completes the campaign. Deploy stays visible while the sector list scrolls.
 
 **Play:** https://vibecodingmatt.github.io/war-survival/
 
@@ -32,20 +33,23 @@ The HUD keeps squad integrity, the equipped weapon, temporary boosts, and Artill
 | --- | --- | --- |
 | 01 · Ashen Crossing | Sunlit jungle gorge and waterfalls | Crimson Warden |
 | 02 · Ember Gate | Dusk ruins, beacons and lanterns | Ember Marshal |
-| 03 · Jade Cascades | Bamboo, twin falls, rain and a faint rainbow | Tidal Oracle |
+| 03 · Jade Cascades | Bamboo, cascading streams, foam and rain | Tidal Oracle |
 | 04 · Frostglass Pass | Ice spires, snow and an aurora | Glacier King |
 | 05 · Sunscar Oasis | Sandstone arches and an oasis | Brass Scarab |
 | 06 · Tempest Reach | Monoliths, rainfall and distant lightning | Storm Herald |
 | 07 · Amber Sanctuary | Autumn trees, pagodas and drifting lanterns | Autumn Ronin |
-| 08 · Cinder Caldera | Basalt, glowing lava and a volcanic crater | Furnace Colossus |
+| 08 · Cinder Caldera | Basalt, lava, drifting ash and a smoking crater | Furnace Colossus |
 | 09 · Lumen Wilds | Moonlit mushrooms and fireflies | Spore Empress |
 | 10 · The Sky Citadel | Floating islands and an eclipse gate | Eclipse Sovereign |
 
-Enemy count, health, and speed increase each sector. Levels 3–10 introduce a champion
-in wave two or three as well as the final guardian. Five boss silhouettes include
+Enemy count, health, and speed increase each sector. Levels 3–10 introduce two
+champions in wave two, another champion in wave three (a pair from Level 5), and
+the final guardian. Five boss silhouettes include
 armored knights, siege tanks, six-legged crawlers, crystal guardians, and winged
 oracles. Salvos, sweeping strikes, cross patterns, and summoned reinforcements require
-different movement. Attacks show red warning zones before dealing damage. Prolonged
+different movement. Later guardians advance into melee range, wind up, and strike
+the squad. Red warning zones show where the attack will land; dodging or killing
+the attacking boss cancels the damage. Frost slows bosses less than infantry. Prolonged
 boss waves trigger an enrage and repeated elite reinforcements; a guardian cannot
 be safely stalled forever while ignoring upgrades.
 
@@ -84,6 +88,8 @@ and releases movement; browser toolbar height changes do not pause it. High grap
 is available in the pause menu. Reduced motion suppresses lightning flashes and
 camera shake, and softens ambient movement.
 
+Waterfalls follow rocky stream beds over curved, irregular lips into foam and spray.
+The caldera adds tumbling ash, rising embers, lava channels and expanding soot clouds.
 Scenery uses bundled textures, instanced geometry, animated water, soft mist,
 wind-driven foliage, and bounded weather particles. Sector scenery is disposed when
 switching worlds; weapon models are cached as they are encountered. There is no

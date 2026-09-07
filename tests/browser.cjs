@@ -5,6 +5,9 @@ let browser;
  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto((process.env.TEST_URL||'http://127.0.0.1:4173/war-survival/')+'?test=1');await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});
+ assert.equal(await page.locator('[data-level]:not(:disabled)').count(),1);
+ await page.locator('[data-level="8"]').evaluate(e=>e.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+ assert.equal(await page.locator('[data-level="0"]').getAttribute('aria-pressed'),'true');
  assert.match(await page.locator('#menu').innerText(),/W A S D/);await page.locator('#start-button').click();
  await page.keyboard.down('KeyD');await page.waitForTimeout(450);await page.keyboard.up('KeyD');assert.ok((await page.evaluate(()=>window.__warTest.snapshot())).x>1);
  await page.keyboard.press('Digit1');await page.waitForFunction(()=>window.__warTest.snapshot().shots.recruits>0);
@@ -18,6 +21,8 @@ let browser;
    assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).level,level);
    for(let wave=0;wave<4;wave++)await page.evaluate(()=>{window.__warTest.clear();window.__warTest.step(3.1);});
    assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).state,'victory');
+   assert.equal(await page.locator('[data-level]:not(:disabled)').count(),Math.min(level+1,10));
+   if(level===1){await page.reload();await page.waitForFunction(()=>window.__warTest?.ready);assert.equal(await page.locator('[data-level]:not(:disabled)').count(),2);assert.equal(await page.locator('[data-level="1"]').getAttribute('aria-pressed'),'true');await page.locator('#start-button').click();continue;}
    if(level<10){await page.locator('#next-level-button').click();assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).squad,9);}
    else {assert.equal(await page.locator('#next-level-button').isVisible(),false);assert.match(await page.locator('#result-title').textContent(),/Borderlands/);}
  }

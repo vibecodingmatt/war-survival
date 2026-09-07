@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.4.0';
+import { randomSource } from '../core/math.js?v=0.4.1';
 const d=new T.Object3D(),direction=new T.Vector3(),up=new T.Vector3(0,1,0),color=new T.Color();
 function glowTexture(){
   const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');

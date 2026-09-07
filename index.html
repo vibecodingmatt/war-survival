@@ -7,9 +7,9 @@
   <meta name="description" content="Ten worlds. One last line. Recruit a squad, discover powerful weapons, and defeat the guardians of the Borderlands.">
   <title>War: Survival</title>
   <link rel="icon" href="./assets/images/emblem.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="./css/mobile.css?v=0.4.0">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.4.0">
+  <link rel="stylesheet" href="./css/style.css?v=0.4.1">
+  <link rel="stylesheet" href="./css/mobile.css?v=0.4.1">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.4.1">
 </head>
 <body>
   <div id="viewport" aria-label="3D battlefield"></div>
@@ -34,19 +34,18 @@
       <h1 id="menu-title">WAR<span class="title-colon">:</span><br><em>SURVIVAL</em></h1>
       <div class="gold-rule"></div><h2>Ten worlds. Your last line.</h2>
       <p class="menu-description"><span class="recruit-text">Shoot left to recruit +1.</span> Hold the center.<br><span class="weapon-text">Shoot right for bigger guns.</span><br>Grow your squad. Outgun the horde.</p>
+      <p class="menu-controls keyboard-only"><kbd>W A S D</kbd> / arrows / drag · Auto-fire<br><kbd>1</kbd> recruit <kbd>2</kbd> enemies <kbd>3</kbd> weapons · <kbd>SPACE</kbd> artillery</p>
+      <p class="menu-controls touch-only">Drag to move · Your squad auto-fires<br>Tap Artillery when you need a hand</p>
       </div>
       <div class="menu-deploy">
       <div class="campaign-heading"><span>CHOOSE YOUR SECTOR</span><small id="campaign-progress">0 / 10 CLEARED</small></div>
       <div class="level-select" role="group" aria-label="Choose one of ten levels"></div>
       <p id="level-description" class="level-description">Dawn · Learn the three lanes · Fresh squad</p>
       <button id="start-button" class="primary-button">DEPLOY SQUAD <span aria-hidden="true">↗</span></button>
-      <div class="mission-facts"><span>10 WORLDS</span><b>·</b><span>10 WEAPONS</span><b>·</b><span>ONE LAST LINE</span></div>
-      <p class="menu-controls keyboard-only"><kbd>W A S D</kbd> / arrows / drag to move <span>•</span> Auto-fire<br><kbd>1</kbd> recruit <kbd>2</kbd> enemies <kbd>3</kbd> weapons <span>•</span> <kbd>SPACE</kbd> barrage</p>
-      <p class="menu-controls touch-only">Drag on the bridge to move · Your squad auto-fires<br>Left: recruit · Center: enemies · Right: weapons<br>Tap Artillery when you need a hand</p>
       </div>
     </div>
     <div class="location-stamp"><span class="stamp-line"></span><span>THE BORDERLANDS<small>ASHEN CROSSING · DAWN</small></span></div>
-    <div class="build-stamp">THE BORDERLANDS CAMPAIGN · 0.4.0</div>
+    <div class="build-stamp">THE BORDERLANDS CAMPAIGN · 0.4.1</div>
   </section>
   <div id="hud" class="hud hidden">
     <div id="boss-hud" class="boss-hud hidden"><span>THE CRIMSON WARDEN</span><div class="boss-track"><i id="boss-fill"></i></div></div>
@@ -63,6 +62,6 @@
   <section id="result-panel" class="modal-layer hidden" aria-labelledby="result-title"><div class="modal compact-modal"><p id="result-kicker" class="eyebrow">MISSION COMPLETE</p><h2 id="result-title">The crossing holds.</h2><p id="result-description" class="modal-description"></p><div class="result-stats"><div><strong id="result-kills">0</strong><small>DEFEATED</small></div><div><strong id="result-time">0:00</strong><small>ELAPSED</small></div><div><strong id="result-health">100</strong><small>INTEGRITY</small></div></div><button id="next-level-button" class="primary-button hidden">NEXT LEVEL · EMBER GATE <span>→</span></button><button id="replay-button" class="primary-button">REPLAY LEVEL <span>↗</span></button><button data-menu class="text-button">Choose a level</button></div></section>
   <section id="error-panel" class="modal-layer hidden"><div class="modal compact-modal"><p class="eyebrow">UNABLE TO START</p><h2>Let's get you into battle.</h2><p id="error-message" class="modal-description">This game needs a browser with WebGL 2 enabled.</p><button class="primary-button" onclick="location.reload()">TRY AGAIN <span>↗</span></button></div></section>
   <noscript><div class="noscript">Enable JavaScript to play War: Survival.</div></noscript>
-  <script type="module" src="./js/main.js?v=0.4.0"></script>
+  <script type="module" src="./js/main.js?v=0.4.1"></script>
 </body>
 </html>

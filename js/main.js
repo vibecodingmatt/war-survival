@@ -1,13 +1,14 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js?v=0.4.0';
-import { createEnvironment } from './world/environment.js?v=0.4.0';
-import { createArmies } from './entities/army.js?v=0.4.0';
-import { createTargets } from './world/targets.js?v=0.4.0';
-import { createEffects } from './systems/effects.js?v=0.4.0';
-import { BattlefieldAudio } from './systems/audio.js?v=0.4.0';
-import { BARRAGE_COOLDOWN, LIMITS, LEVELS } from '../data/waves.js?v=0.4.0';
-import { clamp } from './core/math.js?v=0.4.0';
-import { BOSS_TYPES } from '../data/campaign.js?v=0.4.0';
+import { Simulation } from './core/simulation.js?v=0.4.1';
+import { createEnvironment } from './world/environment.js?v=0.4.1';
+import { createArmies } from './entities/army.js?v=0.4.1';
+import { createTargets } from './world/targets.js?v=0.4.1';
+import { createEffects } from './systems/effects.js?v=0.4.1';
+import { BattlefieldAudio } from './systems/audio.js?v=0.4.1';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS } from '../data/waves.js?v=0.4.1';
+import { clamp } from './core/math.js?v=0.4.1';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.4.1';
+import { createProgress } from './core/progress.js?v=0.4.1';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
@@ -17,6 +18,7 @@ const coarsePointer=matchMedia('(pointer: coarse)');
 let touchMode=coarsePointer.matches,quality=touchMode?'balanced':'high',qualityManual=false;
 let previousTime=0,lastRenderTime=0,hudTime=0,accumulator=0,worldTime=0,shake=0,flash=0,bannerTime=0,calloutTime=0;
 let frames=0,frameTotal=0,metrics={fps:0,calls:0,triangles:0},modal=null;
+let manualTestClock=false;
 const keys=new Set(),pointer={active:false,id:null,x:0,y:0,dx:0,dz:0};
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isTouch=()=>touchMode;
@@ -37,7 +39,8 @@ function applyQuality(value){
   }
   if(camera)resize();
 }
-let selectedLevel=0;
+const progress=createProgress();
+let selectedLevel=progress.next;
 const levelSelect=document.querySelector('.level-select');
 levelSelect.replaceChildren();
 for(let i=0;i<LEVELS.length;i++){
@@ -46,6 +49,7 @@ for(let i=0;i<LEVELS.length;i++){
   button.setAttribute('aria-pressed',String(i===0));levelSelect.append(button);
 }
 function selectLevel(index){
+  if(!progress.allowed(index))return false;
   selectedLevel=index;
   const level=LEVELS[index];
   document.querySelectorAll('[data-level]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.level)===index)));
@@ -71,6 +75,7 @@ function openModal(id){modal=id;show(id);clearInput();modalButtons(id)[0]?.focus
 function closeModal(id){show(id,false);if(modal===id)modal=null;}
 function callout(text,duration=3.5){$('callout').textContent=text;calloutTime=duration;$('callout').classList.add('visible');}
 function start(level=selectedLevel){
+  if(!progress.allowed(level))return;
   selectLevel(level);audio.start().then(updateSound);sim.start(level);effects.reset();clearInput();
   for(const id of ['menu','pause-panel','result-panel'])closeModal(id);
   show('hud');show('wave-hud');show('pause-button');bannerTime=0;calloutTime=0;shake=0;flash=0;
@@ -100,12 +105,14 @@ function processEvents(){
     if(e.type==='death'&&e.boss)shake=.65;
     if(e.type==='victory'||e.type==='defeat'){
       const won=e.type==='victory';
+      if(won){progress.beat(sim.level);updateCompletions();}
       $('result-kicker').textContent=won?'LEVEL '+(sim.level+1)+' COMPLETE':'SQUAD OVERRUN';
-      $('result-title').textContent=won?(sim.level===9?'The Borderlands are yours.':sim.level?'Sector secured.':'The crossing holds.'):'A stand worth remembering.';
+      $('result-title').textContent=won?(sim.level===9&&progress.mask===1023?'The Borderlands are yours.':sim.level?'Sector secured.':'The crossing holds.'):'A stand worth remembering.';
       $('result-description').textContent=won?sim.levelData.bossName+' has fallen. '+sim.recruited+' recruited · '+sim.casualties+' lost · '+sim.weapon.name+'.':'The Legion broke through. Catch +1 bursts on the left and finish moving weapon goals before they pass. Return to the center before enemies get close.';
-      if(sim.level<LEVELS.length-1)$('next-level-button').firstChild.textContent='NEXT · '+LEVELS[sim.level+1].name+' ';
-      show('next-level-button',won&&sim.level<LEVELS.length-1);
-      if(won){try{localStorage.setItem('war-survival-level-'+(sim.level+1),'complete');}catch{}updateCompletions();}
+      const next=progress.allowed(sim.level+1)?sim.level+1:progress.next;
+      $('next-level-button').dataset.next=next;
+      $('next-level-button').firstChild.textContent='NEXT · '+LEVELS[next].name+' ';
+      show('next-level-button',won&&(sim.level<LEVELS.length-1||progress.mask!==1023));
       $('result-kills').textContent=sim.kills;
       $('result-time').textContent=Math.floor(sim.time/60)+':'+String(Math.floor(sim.time%60)).padStart(2,'0');
       $('result-health').textContent=Math.ceil(sim.player.health);
@@ -128,8 +135,8 @@ function updateHud(){
   $('barrage-button').disabled=!ready||sim.state!=='active'||!sim.enemies.length;
   $('barrage-status').textContent=ready?'BARRAGE READY':'RELOADING · '+Math.ceil(sim.barrageCooldown)+'s';
   $('barrage-fill').style.width=(1-sim.barrageCooldown/BARRAGE_COOLDOWN)*100+'%';
-  const boss=sim.enemies.find(e=>e.type==='boss');show('boss-hud',!!boss&&sim.state!=='menu');
-  if(boss){$('boss-fill').style.width=(boss.hp/boss.maxHp)*100+'%';document.querySelector('#boss-hud>span').textContent=(boss.mini?'CHAMPION · ':'')+BOSS_TYPES[boss.bossType].name;}
+  const bosses=sim.enemies.filter(e=>e.type==='boss'),boss=bosses[0];show('boss-hud',!!boss&&sim.state!=='menu');
+  if(boss){$('boss-fill').style.width=(bosses.reduce((n,e)=>n+e.hp,0)/(sim.bossMaxHp||boss.maxHp))*100+'%';document.querySelector('#boss-hud>span').textContent=bosses.length>1?bosses.length+' CHAMPIONS · '+bosses.map(e=>BOSS_TYPES[e.bossType].name).join(' + '):(boss.mini?'CHAMPION · ':'')+BOSS_TYPES[boss.bossType].name;}
 }
 function resize(){
   const portrait=innerWidth/innerHeight<.8;
@@ -152,7 +159,7 @@ function frame(timestamp){
   const dt=Math.min(.1,Math.max(0,(timestamp-previousTime)/1000));previousTime=timestamp;
   const animating=sim.state==='active'||sim.state==='menu'||sim.state==='victory';
   if(animating)worldTime+=dt;
-  if(sim.state==='active'){
+  if(sim.state==='active'&&!manualTestClock){
     accumulator+=dt;
     const input=inputState();
     while(accumulator>=1/60){sim.tick(1/60,input);accumulator-=1/60;}
@@ -193,7 +200,8 @@ async function boot(){
     if(new URLSearchParams(location.search).has('test')){
       window.__warTest={
         ready:true,snapshot:()=>({...sim.snapshot(),metrics}),
-        step:(seconds,input={})=>{for(let t=0;t<seconds;t+=1/60){sim.tick(1/60,input);processEvents();}updateHud();return sim.snapshot();},
+        useManualClock:()=>{manualTestClock=true;accumulator=0;},
+        step:(seconds,input={})=>{for(let i=0;i<Math.round(seconds*60);i++){sim.tick(1/60,input);processEvents();}updateHud();return sim.snapshot();},
         place:(x,z)=>{sim.player.x=clamp(x,LIMITS.minX,LIMITS.maxX);sim.player.z=clamp(z,LIMITS.minZ,LIMITS.maxZ);},
         wave:index=>{sim.beginWave(clamp(index,0,3));processEvents();},
         damage:amount=>{sim.hurt(amount);},
@@ -208,12 +216,15 @@ async function boot(){
   }catch(e){console.error(e);error('The 3D battlefield could not load. Use a current browser with hardware acceleration and WebGL 2 enabled. Local play requires the included web server.');}
 }
 $('start-button').addEventListener('click',()=>start());$('replay-button').addEventListener('click',()=>start());$('restart-button').addEventListener('click',()=>start());
-$('next-level-button').addEventListener('click',()=>start(sim.level+1));
+$('next-level-button').addEventListener('click',()=>start(Number($('next-level-button').dataset.next)));
 function updateCompletions(){
   let cleared=0;
   for(const button of document.querySelectorAll('[data-level]')){
-    let complete=false;try{complete=localStorage.getItem('war-survival-level-'+(Number(button.dataset.level)+1))==='complete';}catch{}
-    button.querySelector('small').textContent=complete?'COMPLETED ✓':LEVELS[Number(button.dataset.level)].difficulty;if(complete)cleared++;
+    const index=Number(button.dataset.level),complete=progress.completed(index),allowed=progress.allowed(index);
+    button.disabled=!allowed;
+    button.querySelector('small').textContent=complete?'COMPLETED ✓':allowed?'NEXT MISSION':'LOCKED · BEAT LEVEL '+(index);
+    button.setAttribute('aria-label','Level '+(index+1)+': '+LEVELS[index].name+'. '+button.querySelector('small').textContent);
+    if(complete)cleared++;
   }
   $('campaign-progress').textContent=cleared+' / '+LEVELS.length+' CLEARED';
 }

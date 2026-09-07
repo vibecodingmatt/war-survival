@@ -1,8 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
 import { HDRLoader } from '../../vendor/HDRLoader.js';
-import { randomSource } from '../core/math.js?v=0.4.0';
-import { WORLDS } from '../../data/campaign.js?v=0.4.0';
-import { createAmbience } from './ambience.js?v=0.4.0';
+import { randomSource } from '../core/math.js?v=0.4.1';
+import { WORLDS } from '../../data/campaign.js?v=0.4.1';
+import { createAmbience } from './ambience.js?v=0.4.1';
 
 const dummy = new T.Object3D();
 function instances(scene, geometry, material, entries, shadow = true) {
@@ -216,15 +216,6 @@ export async function createEnvironment(scene, renderer) {
     vertexShader: 'varying vec2 vUv;varying vec3 vView;void main(){vUv=uv;vec4 view=modelViewMatrix*vec4(position,1.);vView=view.xyz;gl_Position=projectionMatrix*view;}',
     fragmentShader: 'varying vec2 vUv;varying vec3 vView;uniform float time;uniform vec3 tint;void main(){float w=sin(vUv.x*2166.+time*.5+sin(vUv.y*240.+time)*2.)*.5+.5;float s=pow(w,18.)*.13;vec3 c=tint*(.7+vUv.y*.5)+s;float mist=1.-smoothstep(170.,330.,length(vView));gl_FragColor=vec4(c,.94*mist);}',
   })); water.rotation.x=-Math.PI/2; water.position.set(0,-29,-65); scene.add(water);
-  const fallsMat = new T.ShaderMaterial({
-    transparent:true,side:T.DoubleSide,depthWrite:false,uniforms:{time:waterUniform},
-    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-    fragmentShader:'varying vec2 vUv;uniform float time;void main(){float line=sin(vUv.x*85.+sin(vUv.y*16.+time*2.))*.2+.65;float foam=sin(vUv.y*90.+time*13.)*.08;float edge=smoothstep(0.,.15,vUv.x)*smoothstep(1.,.82,vUv.x);gl_FragColor=vec4(vec3(.72,.86,.8)+foam,edge*line*.73);}',
-  });
-  for (const [x,z,w] of [[-22,-15,4],[25,-48,5],[-27,-82,3.5]]) {
-    const fall=new T.Mesh(new T.PlaneGeometry(w,28),fallsMat);fall.position.set(x,-15,z);scene.add(fall);
-  }
-
   const flames = [], braziers = [];
   const fireCanvas=document.createElement('canvas');fireCanvas.width=64;fireCanvas.height=128;
   const fireCtx=fireCanvas.getContext('2d'),fireGradient=fireCtx.createRadialGradient(32,88,1,32,75,52);

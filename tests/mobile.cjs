@@ -34,14 +34,18 @@ async function layout(page){
  await page.setViewportSize({width:844,height:390});await page.waitForTimeout(200);assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).state,'paused');await touchCopy(page);
  await page.locator('#quality-button').tap();assert.equal((await page.evaluate(()=>window.__warTest.renderer())).quality,'high');
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);assert.equal((await page.evaluate(()=>window.__warTest.renderer())).quality,'high');
- await page.locator('#quality-button').tap();await page.locator('#pause-panel [data-menu]').tap();let sector=0;
+ await page.locator('#quality-button').tap();await page.locator('#pause-panel [data-menu]').tap();
+ assert.equal(await page.locator('[data-level]:not(:disabled)').count(),1);
+ await context.addCookies([{name:'war_survival_campaign_v1',value:'3ff',url:base}]);
+ await page.reload();await page.waitForFunction(()=>window.__warTest?.ready);let sector=0;
  for(const [width,height] of [[320,568],[360,640],[390,844],[430,932],[768,1024],[844,390],[667,375],[568,320]]){
    await page.setViewportSize({width,height});await page.evaluate(landscape=>{const s=document.documentElement.style;s.setProperty('--safe-left',landscape?'44px':'0px');s.setProperty('--safe-right',landscape?'44px':'0px');s.setProperty('--safe-top',landscape?'0px':'24px');s.setProperty('--safe-bottom','20px');},width>height);
-   await page.locator('[data-level="'+(sector++%10)+'"]').tap();await touchCopy(page);await page.locator('#start-button').scrollIntoViewIfNeeded();const deploy=await page.locator('#start-button').boundingBox();assert.ok(deploy.y>=0&&deploy.y+deploy.height<=height);
+   await page.locator('[data-level="'+(sector++%10)+'"]').tap();await touchCopy(page);const deploy=await page.locator('#start-button').boundingBox();assert.ok(deploy.y>=0&&deploy.y+deploy.height<=height,'Deploy visible without scrolling at '+width+'x'+height);assert.equal(await page.locator('.menu-content').evaluate(e=>e.scrollTop),0);
    await page.screenshot({path:path.join(output,width+'x'+height+'-menu.png')});await page.locator('#start-button').tap();await page.waitForTimeout(1600);await layout(page);await touchCopy(page);
    await page.screenshot({path:path.join(output,width+'x'+height+'-battle.png')});await page.locator('#pause-button').tap();await touchCopy(page);await page.locator('#pause-panel [data-menu]').tap();
  }
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{const s=document.documentElement.style;for(const key of ['left','right','top','bottom'])s.removeProperty('--safe-'+key);});
+ await page.evaluate(()=>window.__warTest.useManualClock());
  await page.locator('[data-level="9"]').tap();await page.locator('#start-button').tap();let state,full=false;
  for(let i=0;i<1100;i++){
    state=await page.evaluate(()=>window.__warTest.snapshot());if(state.state!=='active')break;

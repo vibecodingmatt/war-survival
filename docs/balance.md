@@ -1,72 +1,78 @@
-# Borderlands campaign balance · v0.4.0
+# Borderlands campaign balance · v0.4.1
 
-Pressure is fixed in `data/waves.js`. Each successive sector increases the four
-waves' enemy count, base health, and movement speed. It does not secretly scale
-enemies against the player's equipment. New weapon routes and bosses change which
-tactics work well, so perceived difficulty is not a simple linear curve.
+Pressure is fixed in data/waves.js. Successive sectors increase enemy count,
+health and speed, with different equipment and boss patterns. There is no hidden
+scaling against the player's equipment and no scripted damage to force casualties.
 
-Every sector starts with nine riflemen and 100 integrity. Recruit bursts add one
-soldier per shot, capped at 42. Full squads hide the boards until casualties.
-Moving weapon goals cost 650, 2,800, and 8,500 damage; they expire at z = 20 and
-return after a short gap. Partial damage survives switching lanes and wave changes
-only until the board passes. Later sectors offer the second upgrade during wave
-one; postponing it until the next wave can waste that opportunity.
+Each sector starts with nine riflemen and 100 integrity. Recruit bursts add one
+soldier per shot, up to 42. Full squads hide boards until casualties. Moving weapon
+goals cost 650, 2,800 and 8,500 damage; partial progress is lost when a board passes.
+Returning goals create another opportunity. Use the end of a thinning wave to work
+on the next weapon instead of waiting for its replacement to arrive under pressure.
 
-Supply pods and powder carts enter from sector three. Their benefits are earned
-by shooting them. Overdrive lasts nine seconds, Rally twelve, Shield absorbs up
-to 30 damage per pod (50 maximum), and Repair restores 20 integrity. Incoming
-damage costs one soldier per eight damage that reaches squad integrity. Wave
-clears restore 10 integrity but do not restore soldiers.
+Supply pods grant Overdrive (nine seconds), Rally (twelve seconds), Shield (30,
+capped at 50), or Repair (20 integrity). Every eight unshielded damage costs a
+soldier. Wave clears restore ten integrity, but soldiers must be recruited again.
 
-Bosses use four warning patterns across five body types. Sectors 3–10 also put a
-champion in wave two or three, at 32% of the final guardian's health. If a boss
-wave lasts over 65 seconds, it enrages, attacks more often, and summons elite
-guards. This prevents a weak squad from indefinitely dodging one stationary boss
-while repeatedly failing to finish the weapon board. Normal tactical victories
-complete boss waves before enrage.
+## Champion encounters and contact
+
+Levels 1–2 remain introductory. Levels 3–10 have two different champions in wave
+two and another in wave three; from Level 5, wave three also has a pair. The final
+wave has its sector guardian. Wave-two champions have 9% of final boss health,
+wave-three champions 20%; pairs have separate positions and staggered approaches.
+
+Later bosses advance past the old stopping point into squad range. They stop to
+wind up a swipe for 1.05 seconds, then recover before pursuing again. Large
+guardians cover a wider area than champions. Killing the attacker cancels its
+pending swipe, and moving the squad clear avoids the damage. Frost slows bosses
+less than infantry. Ranged impacts have lower damage than a final guardian's
+swipe, keeping repeated close encounters dangerous without making one stray shell
+decide the run. Boss waves lasting more than 65 seconds enrage and summon guards.
 
 ## Reproducible simulation checks
 
-`npm run test:balance` runs ten sectors, three seeds (731, 19, 2048), and four
-policies. Inputs are ordinary movement, automatic firing, and artillery, selected
-every 0.2 seconds. No policy grants free soldiers, damage, weapons, or health.
+npm run test:balance checks ten sectors, three seeds (731, 19, 2048), and four
+movement policies. Tactical decisions occur every 0.2 seconds. The policy only
+chooses movement and artillery; all shots, upgrades, recruits and damage use the
+ordinary simulation. It retreats from approaching ranks, dodges laterally when
+needed, and pursues upgrades during the lull at the end of a wave.
 
-| Policy | Result across 30 runs |
+| Policy | Results across 30 runs |
 | --- | --- |
-| Starting squad and rifle, with artillery | 30 defeats |
-| Recruit soldiers but keep the starting rifle | 30 defeats |
-| Upgrade weapons but skip recruiting | 30 defeats |
-| Blend recruitment, upgrades, defense, dodging and artillery | 30 victories |
+| Neglect recruitment and weapon upgrades | 30 defeats |
+| Focus recruitment, neglect stronger weapons | 30 defeats |
+| Focus weapons, neglect recruitment | 30 defeats |
+| Blend recruitment, weapons, defense, dodging and artillery | 30 victories |
 
-The blended policy targets 15/25/34/42 soldiers in sector one and 21/30/38/42
-afterward. It pursues weapon tier three during the first wave from sector three,
-then the final gun during wave three. It reacts to the board's remaining time
-and moves between three depths to evade ground attacks.
+| Sector | Completion time | Remaining integrity | Soldiers lost during run |
+| --- | --- | --- | --- |
+| 1 | 68–71s | 100 | 0 |
+| 2 | 86–88s | 100 | 0 |
+| 3 | 69–73s | 100 | 0 |
+| 4 | 75–76s | 100 | 0 |
+| 5 | 74–75s | 94–100 | 0–3 |
+| 6 | 81s | 80–84 | 2–5 |
+| 7 | 83–90s | 79–100 | 1–3 |
+| 8 | 87–90s | 51–78 | 5–8 |
+| 9 | 88–91s | 27–68 | 6–11 |
+| 10 | 93–97s | 30–44 | 9–11 |
 
-| Sector | Sample completion time | Remaining integrity |
-| --- | --- | --- |
-| 1 | 71–72s | 100 |
-| 2 | 86s | 100 |
-| 3 | 67–68s | 100 |
-| 4 | 72s | 100 |
-| 5 | 70–74s | 100 |
-| 6 | 71–73s | 100 |
-| 7 | 77–79s | 100 |
-| 8 | 76–78s | 100 |
-| 9 | 77–80s | 65–74 |
-| 10 | 82–84s | 86 |
+The final three sectors also assert at least one completed melee hit, boss swipe
+and soldier casualty per tactical run, followed by victory. These are automated
+sample outcomes, not promised human completion rates. Replacement recruits mean
+the final squad size does not by itself measure the losses sustained.
 
-These are an automated policy's results, not predicted human completion times.
-Area damage and cart chains shorten some later encounters even though their
-formations are stronger. Human playtesting should guide further tuning.
+## Browser and progression checks
 
-## Browser checks
+Cookie tests cover first visits, sequential unlocks, replays, malformed values,
+one-year persistence and migration of existing local victories. Client-side
+progress is a convenience for a single-player game, not an anti-cheat system.
 
-`test:campaign` completes all ten sectors with tactical inputs, captures each
-world and guardian, encounters all ten weapons, and verifies saved completion.
-`test:browser` checks keyboard/mouse controls, pause, immediate Space artillery,
-all nine Next Level transitions, fresh starts, and the final campaign result.
-`test:mobile` checks eight touch viewports with safe insets, removal of persistent
-lane panels, drag targeting, two-finger artillery, rotation, and a Level 10 win.
+Desktop checks exercise movement, artillery, pause, all nine Next transitions,
+locked click rejection and unlock persistence after reload. Campaign checks play
+all ten encounters with tactical inputs. Mobile checks cover eight viewports with
+safe insets, drag controls, two-finger artillery, rotation, a Level 10 victory and
+Deploy visibility without scrolling the menu, including a fully unlocked campaign.
 
-Physical phone GPU performance and human difficulty have not been benchmarked.
+Phone testing uses Chrome emulation; physical iOS/Android performance has not been
+benchmarked. Human playtesting should guide the next difficulty adjustment.

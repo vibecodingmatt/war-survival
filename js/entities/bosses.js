@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.0';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.1';
 
 // A few articulated hero models, separate from the instanced infantry.
 export function createBosses(scene){
@@ -42,7 +42,8 @@ export function createBosses(scene){
       part('orb',armor,[0,6.25,0],[1,1.1,.92]);part('box',glow,[0,6.35,.88],[1.35,.2,.15]);
       for(let i=0;i<5;i++)part('cone',trim,[(i-2)*.42,7.4+Math.abs(i-2)*.12,0],[.15,1.2,.28],[0,0,(i-2)*-.16]);
       if(spec.shape==='knight'){
-        part('tube',dark,[2.3,3.4,.6],[.18,5.8,.18]);part('box',trim,[2.3,5.9,.6],[2.4,1.15,.9]);
+        const hammer=new T.Group();hammer.position.set(2.3,4.6,.6);group.add(hammer);joints.push({mesh:hammer,strike:true});
+        part('tube',dark,[0,-1.2,0],[.18,5.8,.18],[0,0,0],hammer);part('box',trim,[0,1.3,0],[2.4,1.15,.9],[0,0,0],hammer);
         part('box',armor,[-2.4,3.9,.7],[1.7,2.7,.45]);part('box',glow,[-2.4,3.9,.96],[.12,2.1,.08]);
       }else if(spec.shape==='crystal'){
         for(const side of [-1,1])for(let i=0;i<3;i++)part('cone',glow,[side*(1.6+i*.5),4.5+i*.75,-.6],[.45,3.1,.55],[0,0,-side*(.25+i*.2)]);
@@ -65,10 +66,12 @@ export function createBosses(scene){
       const dead=e.age!==undefined,size=e.scale/3.7;
       m.group.position.set(e.x,dead?-.6*e.age:Math.sin(time*2)*.08,e.z);
       m.group.rotation.set(dead?-Math.min(1,e.age*1.7)*Math.PI*.48:0,-(e.yaw-Math.PI),dead?e.spin*.12:0);
+      const windup=e.swing>0?1-e.swing/1.05:0,strike=e.swing<=0&&e.recovery>0?Math.sin(e.recovery/.45*Math.PI):0;
+      if(!dead){m.group.rotation.x=-windup*.22+strike*.28;m.group.rotation.z=Math.sin(windup*Math.PI)*.07;}
       m.group.scale.setScalar(size*(dead?Math.max(.01,1-Math.max(0,e.age-3.3)*.75):1));
       m.armor.emissive.setHex(BOSS_TYPES[e.bossType].accent);m.armor.emissiveIntensity=(e.hit||0)*.5;
-      m.glow.emissiveIntensity=1.2+Math.sin(time*4)*.5;
-      if(!dead)for(const j of m.joints){if(j.spin)j.mesh.rotation.z=time*.4;else j.mesh.rotation.x=Math.sin(time*3+j.phase)*.16;}
+      m.glow.emissiveIntensity=1.2+Math.sin(time*4)*.5+windup*3;
+      if(!dead)for(const j of m.joints){if(j.strike)j.mesh.rotation.x=-windup*1.2+strike*1.8;else if(j.spin)j.mesh.rotation.z=time*.4;else j.mesh.rotation.x=Math.sin(time*3+j.phase)*.16;}
     }
   }};
 }
