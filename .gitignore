@@ -1,0 +1,20 @@
+# Local gameplay references can be large; keep them out of the repository.
+/references/gameplay/*
+!/references/gameplay/README.md
+
+# Dependencies, generated output, and local configuration.
+node_modules/
+dist/
+coverage/
+test-results/
+.env
+.env.*
+!.env.example
+*.log
+
+# Operating system and editor scratch files.
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.tmp

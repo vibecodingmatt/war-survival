@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121c1e">
+  <meta name="description" content="Lead your rifle squad against four waves of the Crimson Legion in a cinematic 3D survival game.">
+  <title>War: Survival — Ashen Crossing</title>
+  <link rel="icon" href="./assets/images/emblem.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div id="viewport" aria-label="3D battlefield"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div id="damage-flash" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="War: Survival home">
+      <svg viewBox="0 0 40 48" aria-hidden="true"><path d="M3 5 20 1l17 4v24L20 46 3 29Z"/><path d="m11 13 5 18 4-10 4 10 5-18M20 6v7"/></svg>
+      <span>WAR<span class="brand-colon">:</span> SURVIVAL<small>ASHEN CROSSING</small></span>
+    </a>
+    <div id="wave-hud" class="wave-hud hidden"><span id="wave-label">WAVE 01 <span>/ 04</span></span><div id="wave-pips" class="wave-pips"><i></i><i></i><i></i><i></i></div></div>
+    <div class="top-actions">
+      <button id="sound-button" class="icon-button" aria-label="Mute sound" title="Sound on / off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4v-14ZM15 8c3 2 3 6 0 8M18 5c5 4 5 10 0 14"/></svg></button>
+      <button id="pause-button" class="icon-button hidden" aria-label="Pause game" title="Pause (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+    </div>
+  </header>
+  <div id="loading" class="loading"><div class="loader"></div><span>PREPARING THE CROSSING</span></div>
+  <section id="menu" class="menu hidden" aria-labelledby="menu-title">
+    <div class="menu-content">
+      <p class="eyebrow"><span></span> THE FIRST STAND</p>
+      <h1 id="menu-title">WAR<span class="title-colon">:</span><br><em>SURVIVAL</em></h1>
+      <div class="gold-rule"></div><h2>One bridge. Your last line.</h2>
+      <p class="menu-description">The Crimson Legion is at the gates.<br>Lead your squad. Break their ranks.<br>Hold until the last enemy falls.</p>
+      <button id="start-button" class="primary-button">DEPLOY SQUAD <span aria-hidden="true">↗</span></button>
+      <div class="mission-facts"><span>4 WAVES</span><b>·</b><span>SHORT ENCOUNTER</span><b>·</b><span>3D SQUAD COMBAT</span></div>
+      <p class="menu-controls"><kbd>W A S D</kbd> / <kbd>↑ ← ↓ →</kbd> move <span>•</span> Auto-fire<br>Drag to move on touch <span>•</span> <kbd>SPACE</kbd> barrage</p>
+    </div>
+    <div class="location-stamp"><span class="stamp-line"></span><span>THE BORDERLANDS<small>ASHEN CROSSING · DAWN</small></span></div>
+    <div class="build-stamp">FIRST PLAYABLE · 0.1.0</div>
+  </section>
+  <div id="hud" class="hud hidden">
+    <div id="boss-hud" class="boss-hud hidden"><span>THE CRIMSON WARDEN</span><div class="boss-track"><i id="boss-fill"></i></div></div>
+    <div class="combat-stats"><span class="stat-caption">LEGION DEFEATED</span><strong id="kill-count">0</strong><span id="enemies-left">Awaiting contact</span></div>
+    <div id="world-labels" aria-hidden="true"></div>
+    <div id="banner" class="battle-banner"><span id="banner-kicker"></span><strong id="banner-title"></strong><p id="banner-description"></p></div>
+    <div id="callout" class="callout" role="status" aria-live="polite"></div>
+    <div class="bottom-hud">
+      <div class="squad-card"><div class="squad-heading"><span class="squad-emblem">❖</span><div><span class="stat-caption">RIFLE SQUAD</span><strong><span id="squad-count">9</span> <small>SOLDIERS</small></strong></div><span id="health-number">100</span></div><div class="health-track"><i id="health-fill"></i></div><div class="squad-footer"><span>SQUAD INTEGRITY</span><span id="weapon-name">MK I · VOLLEY RIFLES</span></div></div>
+      <button id="barrage-button" class="ability-button" aria-label="Fire barrage (Space)"><span class="ability-icon" aria-hidden="true">↟</span><span><strong>ARTILLERY</strong><small id="barrage-status">BARRAGE READY</small></span><kbd>SPACE</kbd><i id="barrage-fill"></i></button>
+    </div>
+    <div id="control-hint" class="control-hint">WASD / ARROWS <span>MOVE</span><b>·</b> AUTO-FIRE <b>·</b> SPACE <span>BARRAGE</span><b>·</b> ESC <span>PAUSE</span></div>
+    <div id="joystick" class="joystick hidden"><i></i></div>
+  </div>
+  <section id="upgrade-panel" class="modal-layer hidden" aria-labelledby="upgrade-title"><div class="modal supply-modal"><p class="eyebrow">CROSSING SECURED · RESUPPLY</p><h2 id="upgrade-title">A moment to regroup.</h2><p class="modal-description">Choose a reinforcement for the next assault.</p><div class="upgrade-options">
+    <button data-upgrade="recruits"><span class="upgrade-icon">♟</span><small>REINFORCEMENTS</small><strong>Strength in numbers</strong><p>+3 riflemen join your squad.<br>More soldiers. More firepower.</p><span class="choose">CALL REINFORCEMENTS →</span></button>
+    <button data-upgrade="damage"><span class="upgrade-icon">⌁</span><small>ARMORY</small><strong>Armor-piercing rounds</strong><p>+30% rifle damage.<br>Make every shot count.</p><span class="choose">UPGRADE RIFLES →</span></button>
+    <button data-upgrade="repair"><span class="upgrade-icon">✚</span><small>FIELD SUPPORT</small><strong>Second wind</strong><p>Restore 45 squad integrity.<br>Instantly reload artillery.</p><span class="choose">TEND THE WOUNDED →</span></button>
+  </div></div></section>
+  <section id="pause-panel" class="modal-layer hidden" aria-labelledby="pause-title"><div class="modal compact-modal"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pause-title">Holding position.</h2><p class="modal-description">WASD or arrows to move. Your squad fires automatically.<br>Space calls artillery. Avoid red impact zones.<br>Walk into blue supply crates to recruit riflemen.</p><button id="resume-button" class="primary-button">RETURN TO BATTLE <span>→</span></button><button id="quality-button" class="text-button">Graphics: High</button><button id="restart-button" class="text-button">Restart encounter</button></div></section>
+  <section id="result-panel" class="modal-layer hidden" aria-labelledby="result-title"><div class="modal compact-modal"><p id="result-kicker" class="eyebrow">MISSION COMPLETE</p><h2 id="result-title">The crossing holds.</h2><p id="result-description" class="modal-description"></p><div class="result-stats"><div><strong id="result-kills">0</strong><small>DEFEATED</small></div><div><strong id="result-time">0:00</strong><small>ELAPSED</small></div><div><strong id="result-health">100</strong><small>INTEGRITY</small></div></div><button id="replay-button" class="primary-button">DEPLOY AGAIN <span>↗</span></button></div></section>
+  <section id="error-panel" class="modal-layer hidden"><div class="modal compact-modal"><p class="eyebrow">UNABLE TO START</p><h2>Let's get you into battle.</h2><p id="error-message" class="modal-description">This game needs a browser with WebGL 2 enabled.</p><button class="primary-button" onclick="location.reload()">TRY AGAIN <span>↗</span></button></div></section>
+  <noscript><div class="noscript">Enable JavaScript to play War: Survival.</div></noscript>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
