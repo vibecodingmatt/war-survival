@@ -1,0 +1,206 @@
+/* Input hints follow the actual input device, including touch-enabled laptops. */
+.touch-only { display: none; }
+html[data-input="touch"] .keyboard-only,
+html[data-input="touch"] kbd { display: none !important; }
+html[data-input="touch"] .touch-only { display: block; }
+.menu-controls.touch-only { color: #c0d7d0; line-height: 1.8; }
+
+.touch-layout {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+.touch-layout body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.touch-layout .icon-button { width: 44px; height: 44px; flex-shrink: 0; }
+.touch-layout .text-button { min-height: 44px; min-width: 44px; font-size: 13px; margin-top: 8px; }
+.touch-layout .primary-button { min-height: 52px; }
+.touch-layout .lane-controls button { min-height: 56px; }
+.touch-layout .lane-controls strong { font-size: 11px; letter-spacing: 0; }
+.touch-layout .lane-controls small { font-size: 9px; letter-spacing: 0; }
+.touch-layout .modal-layer {
+  padding: max(12px, var(--safe-top)) max(16px, var(--safe-right)) max(12px, var(--safe-bottom)) max(16px, var(--safe-left));
+}
+.touch-layout .modal { max-height: 100%; padding: 26px 22px; touch-action: pan-y; }
+.touch-layout .modal-description { font-size: 13px; line-height: 1.7; }
+.touch-layout .menu-content { touch-action: pan-y; overscroll-behavior: contain; }
+.touch-layout .menu-controls { font-size: 12px; }
+.touch-layout .level-select strong { font-size: 10px; letter-spacing: 0; }
+.touch-layout .level-select small { font-size: 9px; letter-spacing: 0; }
+.touch-layout .level-description { font-size: 11px; }
+.touch-layout .squad-card,
+.touch-layout .ability-button,
+.touch-layout .lane-controls button,
+.touch-layout .armory-hud { backdrop-filter: none; background-color: #142a2ef5; }
+.touch-layout .primary-button:hover { transform: none; }
+
+/* Portrait phones and tablets: a readable thumb dock, clear of browser chrome. */
+@media (max-width: 600px), (orientation: portrait) and (max-width: 1100px) {
+  .touch-layout .topbar {
+    padding: calc(10px + var(--safe-top)) max(12px, var(--safe-right)) 10px max(12px, var(--safe-left));
+  }
+  .touch-layout .brand { font-size: 12px; gap: 7px; letter-spacing: .3px; }
+  .touch-layout .brand svg { width: 24px; height: 32px; }
+  .touch-layout .brand small { font-size: 8px; letter-spacing: .8px; margin-top: 5px; }
+  .touch-layout .top-actions { gap: 6px; }
+  .touch-layout .wave-hud { top: calc(78px + var(--safe-top)); font-size: 12px; }
+  .touch-layout .wave-pips { margin-top: 7px; }
+  .touch-layout .wave-pips i { width: 23px; }
+  .touch-layout .combat-stats { left: max(14px, var(--safe-left)); top: calc(119px + var(--safe-top)); }
+  .touch-layout .combat-stats .stat-caption { font-size: 8px; letter-spacing: .6px; }
+  .touch-layout .combat-stats strong { font-size: 28px; }
+  .touch-layout .combat-stats > span:last-child { font-size: 10px; }
+  .touch-layout .armory-hud { top: calc(119px + var(--safe-top)); right: max(12px, var(--safe-right)); width: 148px; padding: 10px; }
+  .touch-layout .armory-hud .stat-caption { font-size: 8px; letter-spacing: .2px; }
+  .touch-layout .armory-hud .stat-caption { display: block; line-height: 1.2; }
+  .touch-layout .armory-hud strong { font-size: 13px; margin: 6px 0; }
+  .touch-layout .armory-hud > span:nth-of-type(2) { font-size: 10px; }
+  .touch-layout #weapon-deadline { font-size: 10px; margin-top: 8px; letter-spacing: .2px; }
+  .touch-layout .armory-track { margin-top: 8px; }
+  .touch-layout .boss-hud { top: calc(233px + var(--safe-top)); left: 50%; width: calc(100% - 32px); max-width: 420px; }
+  .touch-layout .boss-hud > span { font-size: 9px; letter-spacing: 1px; }
+  .touch-layout .bottom-hud {
+    bottom: calc(28px + var(--safe-bottom)); left: max(10px, var(--safe-left)); right: max(10px, var(--safe-right)); gap: 8px;
+  }
+  .touch-layout .squad-card { width: 57%; max-width: 300px; min-width: 0; padding: 10px; }
+  .touch-layout .squad-heading { gap: 7px; margin-bottom: 9px; }
+  .touch-layout .squad-heading .stat-caption { display: block; font-size: 8px; letter-spacing: .7px; line-height: 1; }
+  .touch-layout .squad-heading strong { font-size: 22px; }
+  .touch-layout .squad-heading small { font-size: 8px; letter-spacing: .2px; }
+  .touch-layout .squad-heading #health-number { font-size: 12px; }
+  .touch-layout .squad-emblem { font-size: 23px; }
+  .touch-layout .squad-footer { font-size: 9px; letter-spacing: 0; line-height: 1.15; margin-top: 7px; }
+  .touch-layout .squad-footer > span:first-child { display: none; }
+  .touch-layout .ability-button { min-width: 0; width: 41%; max-width: 200px; min-height: 85px; padding: 12px 9px; gap: 6px; }
+  .touch-layout .ability-icon { font-size: 28px; }
+  .touch-layout .ability-button strong { font-size: 11px; letter-spacing: .5px; }
+  .touch-layout .ability-button small { font-size: 9px; letter-spacing: 0; }
+  .touch-layout .lane-controls { bottom: calc(127px + var(--safe-bottom)); width: calc(100% - 20px - var(--safe-left) - var(--safe-right)); max-width: 480px; gap: 6px; }
+  .touch-layout .lane-controls button { width: 33.333%; padding: 10px 5px; }
+  .touch-layout .control-hint { bottom: calc(8px + var(--safe-bottom)); font-size: 9px; letter-spacing: .25px; }
+  .touch-layout .callout { bottom: calc(195px + var(--safe-bottom)); max-width: 94%; white-space: normal; font-size: 11px; letter-spacing: .25px; padding: 9px 12px; }
+  .touch-layout .battle-banner { top: calc(275px + var(--safe-top)); padding: 10px 0; }
+  .touch-layout .battle-banner strong { font-size: 23px; letter-spacing: .5px; }
+  .touch-layout .battle-banner p { font-size: 11px; max-width: 86%; }
+  .touch-layout .menu { background: linear-gradient(0deg,#08191afa 0%,#08191ae0 46%,#08191a22 90%); }
+  .touch-layout .menu-content {
+    display: flex; flex-direction: column; justify-content: flex-end; top: calc(104px + var(--safe-top));
+    bottom: calc(42px + var(--safe-bottom)); left: max(6%, var(--safe-left)); right: max(6%, var(--safe-right));
+    width: auto; max-width: 500px; transform: none; overflow: auto;
+  }
+  .touch-layout .menu-content > * { flex-shrink: 0; }
+  .touch-layout .menu .primary-button { width: 100%; }
+  .touch-layout .menu h1 { font-size: 58px; }
+  .touch-layout .menu h2 { font-size: 20px; }
+  .touch-layout .menu .eyebrow { font-size: 8px; margin-bottom: 12px; }
+  .touch-layout .menu-description { font-size: 13px; line-height: 1.7; margin-bottom: 18px; }
+  .touch-layout .menu .gold-rule { margin: 18px 0; }
+  .touch-layout .menu-controls { margin: 12px 0 0; }
+  .touch-layout .level-select button { min-height: 72px; padding: 12px 9px; }
+  .touch-layout .level-select button > span { font-size: 23px; margin-right: 7px; }
+  .touch-layout .level-description { margin: 10px 0 15px; }
+  .touch-layout .mission-facts { font-size: 8px; letter-spacing: .4px; margin-top: 13px; gap: 6px; }
+  .touch-layout .location-stamp { display: none; }
+  .touch-layout .build-stamp { left: 6%; bottom: calc(15px + var(--safe-bottom)); letter-spacing: 1px; }
+}
+@media (max-width: 600px) and (max-height: 740px) {
+  .touch-layout .menu-content { justify-content: flex-start; top: calc(84px + var(--safe-top)); }
+  .touch-layout .menu h1 { font-size: 44px; }
+  .touch-layout .menu .eyebrow { margin-bottom: 7px; }
+  .touch-layout .menu .gold-rule { margin: 12px 0; }
+  .touch-layout .menu h2 { font-size: 18px; }
+  .touch-layout .menu-description { margin-bottom: 12px; font-size: 12px; }
+  .touch-layout .level-select button { min-height: 65px; }
+  .touch-layout .menu-controls { font-size: 11px; }
+  .touch-layout .mission-facts { display: none; }
+  .touch-layout .armory-hud { padding: 8px 10px; width: 140px; }
+  .touch-layout .armory-hud .stat-caption { display: none; }
+  .touch-layout .armory-hud strong { margin: 2px 0 5px; }
+  .touch-layout .boss-hud { top: calc(192px + var(--safe-top)); }
+  .touch-layout .battle-banner { top: calc(228px + var(--safe-top)); padding: 6px 0; }
+  .touch-layout .battle-banner strong { font-size: 18px; margin: 6px 0; }
+  .touch-layout .battle-banner p { font-size: 10px; }
+}
+@media (max-width: 350px) {
+  .touch-layout .brand { font-size: 11px; }
+  .touch-layout .brand small { font-size: 7px; letter-spacing: .5px; }
+  .touch-layout .brand svg { width: 20px; }
+  .touch-layout .squad-emblem { display: none; }
+  .touch-layout .ability-icon { display: none; }
+  .touch-layout .lane-controls strong { font-size: 10px; }
+  .touch-layout .lane-controls small { font-size: 8px; }
+}
+@media (orientation: portrait) and (max-height: 620px) {
+  .touch-layout .menu .eyebrow, .touch-layout .menu h2 { display: none; }
+  .touch-layout .menu h1 { font-size: 40px; }
+  .touch-layout .menu .gold-rule { margin: 10px 0; }
+}
+
+/* A short, wide phone has room beside the battlefield, not above and below it. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .touch-layout .topbar { padding: calc(8px + var(--safe-top)) max(12px, var(--safe-right)) 8px max(12px, var(--safe-left)); }
+  .touch-layout .brand { font-size: 12px; }
+  .touch-layout .brand small { font-size: 8px; letter-spacing: .7px; }
+  .touch-layout .brand svg { width: 24px; height: 32px; }
+  .touch-layout .wave-hud { top: calc(15px + var(--safe-top)); font-size: 11px; }
+  .touch-layout .wave-pips { margin-top: 6px; }
+  .touch-layout .combat-stats { top: calc(70px + var(--safe-top)); left: max(14px, var(--safe-left)); }
+  .touch-layout .combat-stats strong { font-size: 25px; }
+  .touch-layout .combat-stats > span:last-child { font-size: 10px; }
+  .touch-layout .armory-hud { top: calc(70px + var(--safe-top)); right: max(12px, var(--safe-right)); width: 143px; padding: 10px; }
+  .touch-layout .armory-hud .stat-caption { font-size: 7px; letter-spacing: .25px; }
+  .touch-layout .armory-hud strong { font-size: 12px; margin: 6px 0; }
+  .touch-layout #weapon-deadline { font-size: 9px; margin-top: 8px; }
+  .touch-layout .boss-hud { top: calc(60px + var(--safe-top)); left: 50%; width: 34%; }
+  .touch-layout .boss-hud > span { font-size: 8px; letter-spacing: .5px; }
+  .touch-layout .bottom-hud { bottom: calc(10px + var(--safe-bottom)); left: max(12px, var(--safe-left)); right: max(12px, var(--safe-right)); }
+  .touch-layout .squad-card { width: 175px; padding: 9px; }
+  .touch-layout .squad-heading { gap: 7px; margin-bottom: 7px; }
+  .touch-layout .squad-heading strong { font-size: 20px; }
+  .touch-layout .squad-heading small { font-size: 8px; letter-spacing: 0; }
+  .touch-layout .squad-emblem { display: none; }
+  .touch-layout .squad-footer { font-size: 8px; letter-spacing: 0; margin-top: 6px; }
+  .touch-layout .squad-footer > span:first-child { display: none; }
+  .touch-layout .ability-button { width: 143px; min-width: 0; min-height: 60px; padding: 10px; gap: 7px; }
+  .touch-layout .ability-button strong { font-size: 10px; letter-spacing: .5px; }
+  .touch-layout .ability-button small { font-size: 9px; letter-spacing: 0; }
+  .touch-layout .ability-icon { font-size: 26px; }
+  .touch-layout .lane-controls { bottom: calc(27px + var(--safe-bottom)); width: min(320px,calc(100% - 360px - var(--safe-left) - var(--safe-right))); gap: 5px; left: calc(50% + 16px); }
+  .touch-layout .lane-controls button { width: 33.333%; padding: 8px 4px; }
+  .touch-layout .lane-controls strong { font-size: 10px; }
+  .touch-layout .lane-controls small { font-size: 8px; }
+  .touch-layout .control-hint { bottom: calc(9px + var(--safe-bottom)); font-size: 8px; letter-spacing: 0; left: calc(50% + 16px); }
+  .touch-layout .callout { bottom: calc(118px + var(--safe-bottom)); max-width: 50%; white-space: normal; font-size: 10px; padding: 8px; }
+  .touch-layout .battle-banner { top: calc(100px + var(--safe-top)); width: 48%; padding: 8px 0; }
+  .touch-layout .battle-banner strong { font-size: 20px; letter-spacing: .5px; margin: 7px 0; }
+  .touch-layout .battle-banner p { font-size: 10px; margin: auto; }
+  .touch-layout .menu-content { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-content: center; top: calc(68px + var(--safe-top)); bottom: calc(26px + var(--safe-bottom)); left: max(5%, var(--safe-left)); right: max(5%, var(--safe-right)); width: auto; max-width: none; transform: none; overflow: auto; }
+  .touch-layout .menu h1 { font-size: 42px; }
+  .touch-layout .menu .eyebrow { font-size: 7px; letter-spacing: 2px; margin-bottom: 7px; }
+  .touch-layout .menu .gold-rule { margin: 12px 0; }
+  .touch-layout .menu h2 { font-size: 18px; }
+  .touch-layout .menu-description { font-size: 12px; margin-bottom: 0; line-height: 1.7; }
+  .touch-layout .level-select button { min-height: 64px; padding: 10px 8px; }
+  .touch-layout .level-select button > span { font-size: 22px; margin-right: 6px; }
+  .touch-layout .level-select strong { font-size: 9px; }
+  .touch-layout .level-select small { font-size: 8px; }
+  .touch-layout .level-description { font-size: 10px; margin: 8px 0 12px; }
+  .touch-layout .menu .primary-button { width: 100%; }
+  .touch-layout .menu-controls { font-size: 11px; margin: 10px 0 0; }
+  .touch-layout .mission-facts, .touch-layout .location-stamp { display: none; }
+  .touch-layout .build-stamp { bottom: calc(9px + var(--safe-bottom)); left: 5%; }
+}
+@media (orientation: landscape) and (max-height: 600px) and (max-width: 700px) {
+  .touch-layout .squad-card { width: 138px; padding: 8px; }
+  .touch-layout .squad-heading .stat-caption { font-size: 7px; letter-spacing: .5px; }
+  .touch-layout .squad-heading #health-number { font-size: 11px; }
+  .touch-layout .ability-button { width: 116px; }
+  .touch-layout .ability-icon { display: none; }
+  .touch-layout .lane-controls { bottom: calc(20px + var(--safe-bottom)); left: calc(50% + 11px); width: calc(100% - 294px - var(--safe-left) - var(--safe-right)); }
+  .touch-layout .control-hint { left: calc(50% + 11px); }
+}
+@media (orientation: landscape) and (max-height: 350px) {
+  .touch-layout .menu-content { align-content: start; }
+  .touch-layout .menu h1 { font-size: 38px; }
+  .touch-layout .menu-description { font-size: 11px; line-height: 1.5; }
+}

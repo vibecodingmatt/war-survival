@@ -1,6 +1,6 @@
 {
   "name": "war-survival",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "A 3D browser squad survival game, built for GitHub Pages.",
@@ -8,7 +8,8 @@
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/simulation.test.mjs",
     "test:balance": "node tests/balance.mjs",
-    "test:browser": "node tests/browser.cjs"
+    "test:browser": "node tests/browser.cjs",
+    "test:mobile": "node tests/mobile.cjs"
   },
   "devDependencies": { "playwright-core": "1.61.1" }
 }

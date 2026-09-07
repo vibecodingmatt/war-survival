@@ -208,10 +208,11 @@ export async function createEnvironment(scene, renderer) {
   };
 
   const waterUniform = { value: 0 };
-  const water = new T.Mesh(new T.PlaneGeometry(270, 300, 1, 1), new T.ShaderMaterial({
+  // Extend beneath wide phone views so the river never ends against the sky.
+  const water = new T.Mesh(new T.PlaneGeometry(900, 900, 1, 1), new T.ShaderMaterial({
     uniforms: { time: waterUniform }, transparent: true, opacity: .9,
-    vertexShader: 'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-    fragmentShader: 'varying vec2 vUv;uniform float time;void main(){float w=sin(vUv.x*650.+time*.5+sin(vUv.y*80.+time)*2.)*.5+.5;float s=pow(w,18.)*.13;vec3 c=mix(vec3(.12,.28,.27),vec3(.44,.61,.53),vUv.y)+s;gl_FragColor=vec4(c,.94);}',
+    vertexShader: 'varying vec2 vUv;varying vec3 vView;void main(){vUv=uv;vec4 view=modelViewMatrix*vec4(position,1.);vView=view.xyz;gl_Position=projectionMatrix*view;}',
+    fragmentShader: 'varying vec2 vUv;varying vec3 vView;uniform float time;void main(){float w=sin(vUv.x*2166.+time*.5+sin(vUv.y*240.+time)*2.)*.5+.5;float s=pow(w,18.)*.13;vec3 c=mix(vec3(.12,.28,.27),vec3(.44,.61,.53),vUv.y)+s;float mist=1.-smoothstep(170.,330.,length(vView));gl_FragColor=vec4(c,.94*mist);}',
   })); water.rotation.x=-Math.PI/2; water.position.set(0,-29,-65); scene.add(water);
   const fallsMat = new T.ShaderMaterial({
     transparent:true,side:T.DoubleSide,depthWrite:false,uniforms:{time:waterUniform},

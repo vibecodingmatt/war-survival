@@ -12,11 +12,31 @@ const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
 const audio=new BattlefieldAudio(),sim=new Simulation();
 let renderer,scene,camera,environment,armies,effects,targets;
-let previousTime=0,accumulator=0,worldTime=0,shake=0,flash=0,bannerTime=0,calloutTime=0,quality='high';
+const coarsePointer=matchMedia('(pointer: coarse)');
+let touchMode=coarsePointer.matches,quality=touchMode?'balanced':'high',qualityManual=false;
+let previousTime=0,lastRenderTime=0,hudTime=0,accumulator=0,worldTime=0,shake=0,flash=0,bannerTime=0,calloutTime=0;
 let frames=0,frameTotal=0,metrics={fps:0,calls:0,triangles:0},modal=null;
 const keys=new Set(),pointer={active:false,id:null,x:0,y:0,dx:0,dz:0};
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isTouch=()=>matchMedia('(pointer: coarse)').matches;
+const isTouch=()=>touchMode;
+function updateControls(touch=coarsePointer.matches){
+  const changed=touchMode!==touch;touchMode=touch;
+  document.documentElement.dataset.input=touch?'touch':'keyboard';
+  document.documentElement.classList.toggle('touch-layout',touch||coarsePointer.matches);
+  $('control-hint').textContent=touch?'DRAG TO MOVE · TAP A LANE TO AIM':'WASD / ARROWS · MOVE     1 / 2 / 3 · AIM     SPACE · ARTILLERY     ESC · PAUSE';
+  $('pause-button').title=touch?'Pause game':'Pause (Esc)';
+  $('barrage-button').setAttribute('aria-label',touch?'Fire artillery barrage':'Fire artillery barrage (Space)');
+  renderer?.domElement.setAttribute('aria-label',touch?'Battlefield. Drag to move. Tap a lane to aim. Tap Artillery to strike.':'Battlefield. Use WASD or arrow keys to move; Space for artillery.');
+  if(changed&&!qualityManual)applyQuality(touch||coarsePointer.matches?'balanced':'high');
+}
+function applyQuality(value){
+  quality=value;$('quality-button').textContent='Graphics: '+(quality==='high'?'High':'Balanced');
+  if(environment){
+    environment.sun.shadow.mapSize.setScalar(quality==='high'?2048:1024);
+    environment.sun.shadow.map?.dispose();environment.sun.shadow.map=null;
+  }
+  if(camera)resize();
+}
 let selectedLevel=0;
 function selectLevel(index){
   selectedLevel=index;
@@ -33,7 +53,11 @@ function error(message) {
   show('loading',false);show('menu',false);$('error-message').textContent=message;show('error-panel');
 }
 function updateSound(){ $('sound-button').classList.toggle('muted',!audio.enabled);$('sound-button').setAttribute('aria-label',audio.enabled?'Mute sound':'Enable sound'); }
-function clearInput(){keys.clear();pointer.active=false;pointer.dx=pointer.dz=0;show('joystick',false);}
+function clearInput(){
+  keys.clear();const id=pointer.id;pointer.active=false;pointer.id=null;pointer.dx=pointer.dz=0;
+  if(id!==null&&$('viewport').hasPointerCapture(id))$('viewport').releasePointerCapture(id);
+  $('joystick').firstElementChild.style.transform='translate(0,0)';show('joystick',false);
+}
 function modalButtons(id){return [...$(id).querySelectorAll('button:not(:disabled)')].filter(button=>button.getClientRects().length);}
 function openModal(id){modal=id;show(id);clearInput();modalButtons(id)[0]?.focus();}
 function closeModal(id){show(id,false);if(modal===id)modal=null;}
@@ -81,7 +105,7 @@ function processEvents(){
   }
 }
 function updateHud(){
-  const p=sim.player;
+  const p=sim.player,compactTouch=isTouch()&&innerWidth>innerHeight&&innerWidth<=700;
   $('squad-count').textContent=p.squad;$('health-number').textContent=Math.ceil(p.health);
   $('health-fill').style.width=p.health+'%';$('health-fill').classList.toggle('low',p.health<35);
   $('weapon-name').textContent='MK '+['I','II','III','IV'][p.weaponLevel-1]+' · '+WEAPONS[p.weaponLevel-1].name;
@@ -89,8 +113,9 @@ function updateHud(){
     button.classList.toggle('active',button.dataset.lane===sim.focus);
     button.setAttribute('aria-pressed',String(button.dataset.lane===sim.focus));
   });
-  document.querySelector('[data-lane="recruits"] small').textContent=p.squad>=MAX_SQUAD?'SQUAD FULL · '+MAX_SQUAD:sim.recruits.length?'SHOOT LEFT':'NEXT BURST · '+Math.ceil(sim.recruitTimer)+'s';
-  document.querySelector('[data-lane="weapons"] small').textContent=sim.armory?'SHOOT RIGHT':p.weaponLevel===WEAPONS.length?'FULLY UPGRADED':'INBOUND · '+Math.ceil(sim.weaponTimer)+'s';
+  document.querySelector('[data-lane="recruits"] small').textContent=p.squad>=MAX_SQUAD?(compactTouch?'FULL · ':'SQUAD FULL · ')+MAX_SQUAD:sim.recruits.length?(compactTouch?'LEFT':'SHOOT LEFT'):(compactTouch?'IN ':'NEXT BURST · ')+Math.ceil(sim.recruitTimer)+'s';
+  document.querySelector('[data-lane="enemies"] small').textContent=compactTouch?'CENTER':'SHOOT CENTER';
+  document.querySelector('[data-lane="weapons"] small').textContent=sim.armory?(compactTouch?'RIGHT':'SHOOT RIGHT'):p.weaponLevel===WEAPONS.length?(compactTouch?'MAXED':'FULLY UPGRADED'):(compactTouch?'IN ':'INBOUND · ')+Math.ceil(sim.weaponTimer)+'s';
   const target=sim.armory;
   $('next-weapon').textContent=WEAPONS[p.weaponLevel]?.name||'MAX FIREPOWER';
   $('weapon-remaining').textContent=target?Math.ceil(target.hp).toLocaleString()+' damage to unlock':p.weaponLevel===WEAPONS.length?'ALL WEAPONS EQUIPPED':'Next goal approaching';
@@ -111,9 +136,10 @@ function updateHud(){
 }
 function resize(){
   const portrait=innerWidth/innerHeight<.8;
-  camera.aspect=innerWidth/innerHeight;camera.fov=portrait?54:49;camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?1.6:1));renderer.setSize(innerWidth,innerHeight);
-  if(isTouch())$('control-hint').textContent='DRAG TO MOVE · TAP A LANE TO FOCUS FIRE';
+  camera.aspect=innerWidth/innerHeight;
+  camera.fov=(portrait?54:49)+(coarsePointer.matches?clamp((740-innerHeight)/180,0,1)*(portrait?12:18):0);
+  camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?(coarsePointer.matches?1.4:1.6):1));renderer.setSize(innerWidth,innerHeight);
 }
 function inputState(){
   return {x:(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+pointer.dx,
@@ -122,6 +148,10 @@ function inputState(){
 }
 function frame(timestamp){
   requestAnimationFrame(frame);
+  // Keep high-refresh phones near 60 renders/sec; simulation still advances in fixed steps.
+  const renderInterval=1000/60;
+  if(coarsePointer.matches&&timestamp-lastRenderTime<renderInterval-.5)return;
+  lastRenderTime=timestamp-((timestamp-lastRenderTime)%renderInterval);
   const dt=Math.min(.1,Math.max(0,(timestamp-previousTime)/1000));previousTime=timestamp;
   const animating=sim.state==='active'||sim.state==='menu'||sim.state==='victory';
   if(animating)worldTime+=dt;
@@ -142,9 +172,10 @@ function frame(timestamp){
   const smooth=1-Math.exp(-dt*3);
   camera.position.x+=(targetX-camera.position.x)*smooth;
   camera.position.y+=(targetY-camera.position.y)*smooth;camera.position.z+=(targetZ-camera.position.z)*smooth;
-  camera.lookAt(menu&&!portrait?-8:sim.player.x*.08,1,(portrait?0:-3)+(sim.player.z-11)*.25);
+  const phoneFraming=coarsePointer.matches&&!menu?clamp(2+(820-innerHeight)*.029,2,portrait?10:14):0;
+  camera.lookAt(menu&&!portrait?-8:sim.player.x*.08,1,(portrait?0:-3)+phoneFraming+(sim.player.z-11)*.25);
   if(!reducedMotion&&shake>0){camera.position.x+=Math.sin(worldTime*97)*shake*.22;camera.position.y+=Math.cos(worldTime*79)*shake*.22;}
-  if(frames%5===0)updateHud();
+  hudTime+=dt;if(hudTime>=.1){hudTime%=.1;updateHud();}
   renderer.render(scene,camera);
   frames++;frameTotal+=dt;
   if(frameTotal>=1){metrics={fps:Math.round(frames/frameTotal),calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};frames=0;frameTotal=0;}
@@ -154,11 +185,11 @@ async function boot(){
     renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
     renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
-    renderer.domElement.tabIndex=-1;renderer.domElement.setAttribute('aria-label','Battlefield. Use WASD or arrow keys to move; Space for artillery.');
+    renderer.domElement.tabIndex=-1;updateControls();
     $('viewport').append(renderer.domElement);
     renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();if(sim.state==='active')sim.pause();error('The graphics connection was interrupted. Reload to return to Ashen Crossing.');});
     scene=new T.Scene();camera=new T.PerspectiveCamera(49,innerWidth/innerHeight,.3,450);camera.position.set(-9,25,38);
-    environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);targets=createTargets(scene);resize();updateSound();selectLevel(selectedLevel);updateCompletions();
+    environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);targets=createTargets(scene);applyQuality(quality);updateSound();selectLevel(selectedLevel);updateCompletions();
     armies.update(sim,0);effects.update(sim,0,0);environment.update(0);targets.update(sim,0);
     await renderer.compileAsync(scene,camera);
     show('loading',false);show('menu');requestAnimationFrame(t=>{previousTime=t;frame(t);});
@@ -171,7 +202,9 @@ async function boot(){
         damage:amount=>{sim.hurt(amount);},
         targets:()=>targets.snapshot(),
         clear:()=>{for(const e of sim.enemies)sim.damage(e,e.hp+1,false);},
-        renderer:()=>({...metrics,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures}),
+        renderer:()=>({...metrics,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,quality,pixelRatio:renderer.getPixelRatio(),shadowSize:environment.sun.shadow.mapSize.x}),
+        controls:()=>({touch:touchMode,dragging:pointer.active,dx:pointer.dx,dz:pointer.dz,steerX:sim.steerX}),
+        screenPoint:(x,y,z)=>{const p=new T.Vector3(x,y,z).project(camera);return {x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};},
       };
     }
   }catch(e){console.error(e);error('The 3D battlefield could not load. Use a current browser with hardware acceleration and WebGL 2 enabled. Local play requires the included web server.');}
@@ -192,15 +225,35 @@ document.querySelectorAll('[data-menu]').forEach(button=>button.addEventListener
 }));
 $('sound-button').addEventListener('click',()=>{audio.toggle();audio.start().then(updateSound);updateSound();});
 $('pause-button').addEventListener('click',togglePause);$('resume-button').addEventListener('click',togglePause);
-$('barrage-button').addEventListener('click',()=>{sim.barrage();renderer.domElement.focus();});
+function combatButton(button,action){
+  let lastTouch=-Infinity;
+  button.addEventListener('pointerdown',event=>{
+    if(event.pointerType!=='touch'||button.disabled)return;
+    lastTouch=performance.now();event.preventDefault();action();
+  });
+  for(const name of ['pointerup','pointercancel'])button.addEventListener(name,event=>{if(event.pointerType==='touch')lastTouch=performance.now();});
+  button.addEventListener('click',event=>{
+    // Secondary fingers do not reliably produce clicks; suppress the primary finger's follow-up click.
+    if(event.pointerType==='touch'||(event.detail>0&&performance.now()-lastTouch<800))return;
+    action();
+  });
+}
+combatButton($('barrage-button'),()=>{sim.barrage();renderer.domElement.focus();});
 $('quality-button').addEventListener('click',()=>{
-  quality=quality==='high'?'balanced':'high';$('quality-button').textContent='Graphics: '+(quality==='high'?'High':'Balanced');
-  environment.sun.shadow.mapSize.setScalar(quality==='high'?2048:1024);
-  environment.sun.shadow.map?.dispose();environment.sun.shadow.map=null;resize();
+  qualityManual=true;applyQuality(quality==='high'?'balanced':'high');
 });
-document.querySelectorAll('[data-lane]').forEach(button=>button.addEventListener('click',()=>{sim.selectLane(button.dataset.lane);renderer.domElement.focus();}));
-addEventListener('resize',()=>{if(renderer)resize();});
+document.querySelectorAll('[data-lane]').forEach(button=>combatButton(button,()=>{sim.selectLane(button.dataset.lane);renderer.domElement.focus();}));
+let layoutWidth=innerWidth,layoutHeight=innerHeight;
+addEventListener('resize',()=>{
+  const rotated=(layoutWidth>layoutHeight)!==(innerWidth>innerHeight);
+  layoutWidth=innerWidth;layoutHeight=innerHeight;
+  if(rotated){clearInput();sim.steerX=null;if(sim.state==='active')togglePause();}
+  if(camera)resize();
+});
+coarsePointer.addEventListener('change',()=>{updateControls();if(camera)resize();});
+document.addEventListener('pointerdown',event=>{if(event.pointerType==='touch')updateControls(true);else if(event.pointerType==='mouse'&&!coarsePointer.matches)updateControls(false);},{passive:true});
 addEventListener('keydown',event=>{
+  if(['Escape','Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Digit1','Digit2','Digit3'].includes(event.code))updateControls(false);
   if(event.code==='Escape'&&!event.repeat){if(sim.state==='active'||sim.state==='paused')togglePause();return;}
   if(modal&&event.code==='Tab'){
     const buttons=modalButtons(modal),first=buttons[0],last=buttons.at(-1);
@@ -216,12 +269,16 @@ addEventListener('blur',()=>{clearInput();if(sim.state==='active')togglePause();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInput();if(sim.state==='active')togglePause();}});
 $('viewport').addEventListener('pointerdown',event=>{
   if(sim.state!=='active'||pointer.active||event.button>0)return;
+  sim.steerX=null;keys.clear();
   pointer.active=true;pointer.id=event.pointerId;pointer.x=event.clientX;pointer.y=event.clientY;
+  $('joystick').firstElementChild.style.transform='translate(0,0)';
   $('viewport').setPointerCapture(event.pointerId);$('joystick').style.left=event.clientX-47+'px';$('joystick').style.top=event.clientY-47+'px';show('joystick');
 });
 $('viewport').addEventListener('pointermove',event=>{
   if(!pointer.active||pointer.id!==event.pointerId)return;
-  pointer.dx=clamp((event.clientX-pointer.x)/48,-1,1);pointer.dz=clamp((event.clientY-pointer.y)/48,-1,1);
+  const x=event.clientX-pointer.x,z=event.clientY-pointer.y,distance=Math.hypot(x,z),deadZone=isTouch()?5:0,radius=isTouch()?54:48;
+  const strength=distance>deadZone?Math.min(1,(distance-deadZone)/(radius-deadZone))/distance:0;
+  pointer.dx=x*strength;pointer.dz=z*strength;
   $('joystick').firstElementChild.style.transform='translate('+pointer.dx*27+'px,'+pointer.dz*27+'px)';
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])$('viewport').addEventListener(name,event=>{if(event.pointerId===pointer.id)clearInput();});

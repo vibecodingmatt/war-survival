@@ -1,6 +1,6 @@
 # War: Survival
 
-**The Ember Gate, v0.3.0**
+**The Ember Gate — mobile update, v0.3.1**
 
 Lead a blue rifle squad against the Crimson Legion on a ruined stone bridge above
 a jungle gorge. Beat **Level 1: Ashen Crossing** (617 enemies), then take on
@@ -50,6 +50,31 @@ soldier; losses animate on the bridge. Healing between waves does not replace
 soldiers. Recruitment rebuilds your firepower; reaching zero integrity ends the run.
 The pause menu includes a **Balanced** graphics setting.
 
+## Mobile web
+
+Touch devices show drag-and-tap instructions throughout the menu, HUD, pause
+help, and accessibility labels. Keyboard shortcuts remain available for desktop
+players and appear when a physical keyboard is used.
+
+- Drag anywhere on the bridge to move; lifting your finger stops movement.
+  A small dead zone filters finger jitter. Beginning a drag cancels lane steering.
+- Lane buttons respond on touch-down. A second finger can tap Artillery while
+  the first keeps moving the squad.
+- Phone controls use at least 44px touch targets, larger text, and screen inset
+  spacing. Portrait, landscape, and tablet layouts keep the controls separate.
+  Short phone screens use adjusted camera framing to keep the squad visible.
+- Rotating during combat pauses the game and releases held movement. Tap
+  Return to Battle after rotating; browser toolbar height changes do not pause.
+- Touch devices default to Balanced graphics: pixel ratio capped at 1, 1024px
+  shadow maps, and no blur behind HUD cards. Phone rendering is limited to about
+  60 frames per second, and HUD updates run at 10Hz. Combat keeps its fixed 60Hz
+  simulation. High graphics remains available in the pause menu.
+
+Mobile verification uses Chrome touch emulation at eight sizes from 320×568 to
+768×1024, including landscape and simulated notched-screen insets. It covers
+multi-touch artillery, drag release, rotation, text/labels, full-squad visibility,
+and a complete Level 2 run. Physical iOS/Android performance is not benchmarked.
+
 ## Local development
 
 Requires Node.js 18 or newer. No dependency install or build is needed to play:
@@ -67,6 +92,7 @@ is not supported.
 ```text
 index.html                    Menus, HUD, and accessible controls
 css/style.css                 Responsive interface
+css/mobile.css                Touch instructions, phone/tablet layouts, safe areas
 js/main.js                    Browser startup, input, camera, and UI
 js/core/simulation.js          Fixed-step gameplay, damage, waves, and progression
 js/core/math.js                Seeded random numbers and formation helpers
@@ -96,6 +122,7 @@ npm test
 npm run test:balance
 npm install
 npm run test:browser
+npm run test:mobile
 ```
 
 The browser suite requires a running preview server and Chrome. Set
