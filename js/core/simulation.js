@@ -1,6 +1,7 @@
-import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.4.1';
-import { clamp, randomSource, formation } from './math.js?v=0.4.1';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.1';
+import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.5.0';
+import { clamp, randomSource, formation } from './math.js?v=0.5.0';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.5.0';
+import { updateChoices, updatePowers, fling } from './encounters.js?v=0.5.0';
 
 export class Simulation {
   constructor(seed = 731) { this.seed = seed; this.reset(); this.preview(); }
@@ -22,7 +23,9 @@ export class Simulation {
     this.recruited = 0; this.breaches = 0; this.shots = { recruits: 0, enemies: 0, weapons: 0 };
     this.weaponTimer = 0; this.missedWeapons = 0; this.casualties = 0; this.casualtyDamage = 0;
     this.pods=[];this.podTimer=12;this.podsOpened=0;this.cartsDestroyed=0;
-    this.buffs={overdrive:0,rally:0};this.shield=0;
+    this.buffs={overdrive:0,rally:0,starfall:0,tesla:0,prism:0};this.shield=0;
+    this.choice=null;this.choiceTimer=8;this.choiceCount=0;this.choicesTaken=0;this.powersTaken=0;this.lastChoice=null;
+    this.powerTimers={starfall:0,tesla:0,prism:0};this.launchedSoldiers=0;this.knockups=[];
     this.meleeHits=0;this.bossSwipes=0;
     this.bossMaxHp=0;
   }
@@ -102,6 +105,9 @@ export class Simulation {
     this.events.push({ type: 'barrage' }); return true;
   }
   target(x, z) {
+    if(this.choice&&this.focus!=='enemies'){
+      return this.choice.age>=1.2?this.choice.options.find(o=>o.side===this.focus&&o.hp>0):null;
+    }
     if (this.focus === 'recruits') {
       if (this.recruitHitCooldown > 0 || this.player.squad >= MAX_SQUAD) return null;
       return this.recruits.find(t => t.hp > 0 && t.reserved === 0 && Math.abs(this.player.z - t.z) < 45) || null;
@@ -132,20 +138,23 @@ export class Simulation {
     this.focus = p.x < -LANE_THRESHOLD ? 'recruits' : p.x > LANE_THRESHOLD ? 'weapons' : 'enemies';
     if (input.barrage) this.barrage();
 
-    this.updateSupplies(dt);
+    updateChoices(this,dt);this.updateSupplies(dt);updatePowers(this,dt);
     const weapon = this.weapon;
     for (let i = 0; i < p.squad; i++) {
+      if(this.knockups.some(unit=>unit.index===i))continue;
       this.shootTimers[i] -= dt; this.recoil[i] = Math.max(0, this.recoil[i] - dt * 6);
       const f = formation(i, p.squad), sx = p.x + f.x, sz = p.z + f.z, target = this.target(sx, sz);
       if (target) {
         this.aim[i] = Math.atan2(-(target.x - sx), -(target.z - sz));
         if (this.shootTimers[i] <= 0 && this.bullets.length < 360) {
           const x = sx - Math.sin(this.aim[i]) * 1.35, z = sz - Math.cos(this.aim[i]) * 1.35;
-          this.bullets.push({ id: this.nextId++, x, y: 1.56, z, target, damage: weapon.damage, life: 0, speed: weapon.speed,
-            tx: target.x, ty: target.y || target.scale * 1.15, tz: target.z, weaponLevel: p.weaponLevel, weaponId:weapon.id, splash: weapon.splash, color: weapon.color });
-          target.reserved += weapon.damage; this.shots[this.focus]++;
+          const prism=this.buffs.prism>0&&this.focus==='enemies'&&target.type!=='pod';
+          const damage=target.type==='choice'?1:weapon.damage*(prism?1.5:1),shotColor=prism?0xeb9dff:weapon.color;
+          this.bullets.push({ id: this.nextId++, x, y: 1.56, z, target, damage, life: 0, speed: weapon.speed,
+            tx: target.x, ty: target.y || target.scale * 1.15, tz: target.z, weaponLevel: p.weaponLevel, weaponId:weapon.id, splash: weapon.splash, color: shotColor,prism });
+          target.reserved += damage; this.shots[this.focus]++;
           if (target.type === 'recruit') this.recruitHitCooldown = .38;
-          this.events.push({ type: 'shot', x, y: 1.56, z, yaw: this.aim[i], weaponLevel: p.weaponLevel, weaponId:weapon.id, color: weapon.color });
+          this.events.push({ type: 'shot', x, y: 1.56, z, yaw: this.aim[i], weaponLevel: p.weaponLevel, weaponId:weapon.id, color: shotColor,prism });
           this.shootTimers[i] = weapon.interval * (.94 + this.random() * .12)*(this.buffs.overdrive>0?.62:1); this.recoil[i] = 1;
         }
       } else this.aim[i] *= 1 - dt * 3;
@@ -201,8 +210,8 @@ export class Simulation {
         if (bullet.target.hp > 0) {
           this.damage(bullet.target, bullet.damage, false);
           const special=this.weapons.find(w=>w.id===bullet.weaponId)||weapon;
-          if(!['recruit','weapon','pod'].includes(bullet.target.type))this.weaponImpact(bullet,special);
-          if (bullet.splash && !['recruit', 'weapon','pod'].includes(bullet.target.type)) {
+          if(!['recruit','weapon','pod','choice'].includes(bullet.target.type))this.weaponImpact(bullet,special);
+          if (bullet.splash && !['recruit', 'weapon','pod','choice'].includes(bullet.target.type)) {
             for (const other of this.enemies) if (other !== bullet.target && other.hp > 0 && Math.hypot(other.x - bullet.tx, other.z - bullet.tz) < bullet.splash) this.damage(other, bullet.damage * .55, true);
             this.events.push({ type: 'cannon', x: bullet.tx, y: .6, z: bullet.tz, color:bullet.color });
           }
@@ -214,11 +223,12 @@ export class Simulation {
     for (const zone of this.zones) {
       if(zone.melee&&zone.owner.hp<=0){zone.done=true;continue;}
       zone.remaining -= dt; if (zone.remaining > 0 || zone.done) continue; zone.done = true;
-      this.events.push({ type: 'explosion', x: zone.x, y: .2, z: zone.z, friendly: zone.friendly, radius: zone.radius });
+      this.events.push({ type: 'explosion', x: zone.x, y: .2, z: zone.z, friendly: zone.friendly, radius: zone.radius, power:zone.power });
+      if(zone.melee)this.events.push({type:'bossSwing',x:zone.x,z:zone.z,radius:zone.radius,yaw:zone.owner.yaw});
       if (zone.friendly) {
-        for (const enemy of this.enemies) if (Math.hypot(enemy.x - zone.x, enemy.z - zone.z) < zone.radius + enemy.scale * .3) this.damage(enemy, zone.damage, true);
+        for (const enemy of this.enemies) if (Math.hypot(enemy.x - zone.x, enemy.z - zone.z) < zone.radius + enemy.scale * .3) {this.damage(enemy, zone.damage, true);if(zone.power&&enemy.hp<=0&&enemy.type!=='boss')fling(enemy,zone.x,zone.z,1.3);}
       } else if (Math.hypot(p.x - zone.x, p.z - zone.z) < zone.radius + (zone.melee?1.1:.35)) {
-        if(this.hurt(zone.damage)&&zone.melee)this.meleeHits++;
+        if(this.hurt(zone.damage,false,zone.melee?zone.owner:null)&&zone.melee)this.meleeHits++;
       }
     }
     this.zones = this.zones.filter(z => !z.done);
@@ -228,10 +238,7 @@ export class Simulation {
       this.events.push({ type: 'death', x: enemy.x, y: enemy.scale, z: enemy.z, scale: enemy.scale, boss: enemy.type === 'boss' });
     }
     this.enemies = this.enemies.filter(e => e.hp > 0);
-    for (const corpse of this.corpses) corpse.age += dt;
-    this.corpses = this.corpses.filter(c => c.age < 4.5).slice(-72);
-    for (const soldier of this.fallen) soldier.age += dt;
-    this.fallen = this.fallen.filter(c => c.age < 4.5).slice(-MAX_SQUAD);
+    this.updateRemains(dt);
     if (p.health <= 0) { this.finish(false); return; }
     if (!this.enemies.length) {
       this.zones = [];
@@ -242,6 +249,14 @@ export class Simulation {
         else { p.health = Math.min(100, p.health + 10); this.beginWave(this.wave + 1); }
       }
     }
+  }
+  updateRemains(dt){
+    for(const corpse of this.corpses)corpse.age+=dt;
+    this.corpses=this.corpses.filter(c=>c.age<4.5).slice(-72);
+    for(const soldier of this.fallen)soldier.age+=dt;
+    this.fallen=this.fallen.filter(c=>c.age<4.5).slice(-MAX_SQUAD);
+    for(const unit of this.knockups)unit.age+=dt;
+    this.knockups=this.knockups.filter(unit=>unit.age<2.2&&unit.index<this.player.squad);
   }
   clearRecruits() {
     // Invalidate targets already being chased by bullets as well as visible boards.
@@ -259,6 +274,7 @@ export class Simulation {
       for(const pod of this.pods){pod.z+=dt*2.6;pod.hit=Math.max(0,pod.hit-dt*5);if(pod.z>=SUPPLY_EXIT)pod.hp=0;}
       this.pods=this.pods.filter(p=>p.hp>0);
     }
+    if(this.choice)return;
     if (this.player.squad >= MAX_SQUAD) this.clearRecruits();
     else {
       this.recruitTimer = Math.max(0, this.recruitTimer - dt);
@@ -285,6 +301,10 @@ export class Simulation {
   }
   damage(target, amount, blast, quiet=false) {
     if (target.hp <= 0) return;
+    if(target.type==='choice'){
+      if(this.choice?.options.includes(target)&&this.choice.age>=1.2){target.lastHit=this.time;target.hit=1;}
+      return;
+    }
     target.hp -= amount; target.hit = 1; target.blast = blast;
     if(!quiet)this.events.push({ type: 'hit', x: target.x, y: target.y || target.scale * 1.2, z: target.z, blast, scale: target.scale, friendly: ['recruit', 'weapon','pod'].includes(target.type) });
     if (target.type === 'recruit') {
@@ -301,7 +321,7 @@ export class Simulation {
       }
     } else if(target.type==='pod'&&target.hp<=0){
       this.podsOpened++;
-      if(target.kind==='shield')this.shield=Math.min(50,this.shield+30);
+      if(target.kind==='shield')this.shield=Math.max(this.shield,Math.min(50,this.shield+30));
       else if(target.kind==='repair')this.player.health=Math.min(100,this.player.health+20);
       else this.buffs[target.kind]=target.kind==='rally'?12:9;
       this.events.push({type:'powerup',kind:target.kind,x:target.x,z:target.z,text:{shield:'AEGIS · 30 SHIELD',repair:'FIELD REPAIR · +20 INTEGRITY',overdrive:'OVERDRIVE · RAPID FIRE FOR 9s',rally:'RALLY · DOUBLE RECRUITS FOR 12s'}[target.kind]});
@@ -313,6 +333,11 @@ export class Simulation {
   }
   weaponImpact(bullet,weapon){
     const target=bullet.target;
+    if(bullet.prism){
+      if(target.hp<=0&&target.type!=='boss')fling(target,this.player.x,this.player.z,.8);
+      const nearby=this.enemies.filter(e=>e!==target&&e.hp>0&&Math.hypot(e.x-target.x,e.z-target.z)<7).sort((a,b)=>Math.abs(a.z-target.z)-Math.abs(b.z-target.z)).slice(0,3);
+      for(const e of nearby){this.damage(e,bullet.damage*.65,false);if(e.hp<=0&&e.type!=='boss')fling(e,target.x,target.z,.7);this.events.push({type:'powerBeam',x:target.x,y:target.scale,z:target.z,tx:e.x,ty:e.scale,tz:e.z,color:0xeb9dff});}
+    }
     if(weapon.slow)target.slow=2.4;
     if(weapon.burn){target.burn=2.5;target.burnDamage=weapon.burn;}
     if(weapon.chain||weapon.pierce){
@@ -348,26 +373,41 @@ export class Simulation {
     }
     this.events.push({type:'warning',text:enragedNow?'GUARDIAN ENRAGED · ELITE REINFORCEMENTS':pattern==='sweep'?'SWEEPING STRIKE · KEEP MOVING':pattern==='summon'?'REINFORCEMENTS · WATCH THE IMPACT ZONES':'INCOMING IMPACT · MOVE OUT OF THE RED ZONES'});
   }
-  hurt(amount, breach = false) {
+  hurt(amount, breach = false, impact=null) {
     if (this.state !== 'active' || (!breach && this.hurtCooldown > 0)) return false;
-    const absorbed=Math.min(amount,this.shield);this.shield-=absorbed;amount-=absorbed;
-    if(amount<=0){this.hurtCooldown=.22;return true;}
+    const initialDamage=amount,absorbed=Math.min(amount,this.shield);this.shield-=absorbed;amount-=absorbed;
+    if(amount<=0){this.hurtCooldown=.22;if(impact)this.events.push({type:'shieldBlock',x:this.player.x,z:this.player.z});return true;}
     this.player.health = Math.max(0, this.player.health - amount);
     this.casualtyDamage += amount;
+    const launchCount=impact?Math.ceil(this.player.squad*(impact.mini?.10:.16)*amount/initialDamage):0;
     const losses = Math.min(this.player.squad - 1, Math.floor(this.casualtyDamage / 8));
     this.casualtyDamage %= 8;
     if (losses > 0) {
       const p = this.player;
       for (let i = 0; i < losses; i++) {
         const f = formation(p.squad - 1 - i, p.squad);
+        const spread=losses>1?(i/(losses-1)-.5)*2:Math.sin(this.time*9),side=Math.sign(spread)||1;
+        const flight=impact?{vx:spread*7+(p.x-impact.x)*.35,vy:9.5+(i%3)*1.3,vz:3.5+(i%3)*.8,spin:side*(3+i*.3)}:null;
         this.fallen.push({ x: p.x + f.x, z: p.z + f.z, scale: 1.08, age: 0, yaw: 0,
-          spin: (this.random() - .5) * 3, lift: 1.6, weaponLevel: p.weaponLevel,weaponId:this.weapon.id });
+          spin: (this.random() - .5) * 3, lift: 1.6, flight,weaponLevel: p.weaponLevel,weaponId:this.weapon.id });
       }
       p.squad -= losses; this.casualties += losses;
       this.recruitTimer = Math.min(this.recruitTimer, 1.5);
       this.events.push({ type: 'casualty', amount: losses });
     }
-    if (!breach) this.hurtCooldown = .22;
+    if(impact){
+      const p=this.player,total=Math.max(losses,Math.min(p.squad+losses-1,launchCount)),survivors=Math.min(p.squad-1,total-losses);
+      for(let i=0;i<survivors;i++){
+        const index=p.squad-1-i,f=formation(index,p.squad),x=p.x+f.x,z=p.z+f.z,side=i%2?1:-1;
+        this.knockups=this.knockups.filter(unit=>unit.index!==index);
+        this.knockups.push({index,x,z,age:0,yaw:0,flight:{vx:clamp(side*(2.5+i*.4),(-5.9-x)/1.2,(5.9-x)/1.2),vy:8.5,vz:2,spin:side*3}});
+      }
+      this.launchedSoldiers+=total;
+      this.events.push({type:'bossImpact',x:p.x,z:p.z,amount:total,lost:losses});
+    }
+    // Give the squad a brief recovery window after a heavy hit so overlapping
+    // shells cannot erase the formation while its soldiers are still in flight.
+    if (!breach) this.hurtCooldown = impact ? .85 : .22;
     this.events.push({ type: 'hurt', amount });
     return true;
   }
@@ -377,6 +417,8 @@ export class Simulation {
     return { state: this.state, level: this.level + 1, levelName: this.levelData.name, wave: this.wave + 1, time: this.time, kills: this.kills, health: this.player.health,
       squad: this.player.squad, weaponLevel: this.player.weaponLevel, weaponName: this.weapon.name,weaponId:this.weapon.id,weaponDps:this.weapon.damage/this.weapon.interval,
       shield:this.shield,buffs:{...this.buffs},podsOpened:this.podsOpened,cartsDestroyed:this.cartsDestroyed,
+      choicesTaken:this.choicesTaken,powersTaken:this.powersTaken,lastChoice:this.lastChoice,launchedSoldiers:this.launchedSoldiers,knockedDown:this.knockups.length,
+      choice:this.choice?{id:this.choice.id,age:this.choice.age,z:this.choice.z,remaining:(SUPPLY_EXIT-this.choice.z)/this.choice.speed,options:this.choice.options.map(o=>({kind:o.kind,side:o.side,hp:o.hp}))}:null,
       focus: this.focus, recruited: this.recruited, breaches: this.breaches, shots: { ...this.shots },
       casualties: this.casualties, meleeHits:this.meleeHits, bossSwipes:this.bossSwipes, fallen: this.fallen.length, missedWeapons: this.missedWeapons,
       nextRecruits: this.recruitTimer, nextWeapon: this.weaponTimer,

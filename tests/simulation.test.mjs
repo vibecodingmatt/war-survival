@@ -5,7 +5,7 @@ import { LIMITS, MAX_SQUAD, WAVES, WEAPONS, LEVELS, SUPPLY_EXIT } from '../data/
 import { strategy } from './strategy.mjs';
 import { WEAPON_LIBRARY, BOSS_TYPES } from '../data/campaign.js';
 function advance(sim,seconds,input={}){for(let i=0;i<seconds*60;i++){sim.tick(1/60,input);sim.drainEvents();}}
-function fresh(){const sim=new Simulation();sim.start();return sim;}
+function fresh(){const sim=new Simulation();sim.start();sim.choiceTimer=Infinity;return sim;}
 test('movement is bounded, normalized, and manual movement overrides lane steering',()=>{
   const a=fresh(),b=fresh();advance(a,.4,{x:1});advance(b,.4,{x:1,z:1});
   assert.ok(Math.hypot(b.player.x,b.player.z-11)<Math.hypot(a.player.x,a.player.z-11)*1.05);
@@ -108,7 +108,7 @@ test('levels start fresh, remain independently replayable, and Level 2 increases
 });
 test('unupgraded play loses even with artillery; blended play can win across seeds',()=>{
   for(const level of [0,1])for(const seed of [731,19,2048])for(const mode of ['none','balanced','balanced-no-art']){
-    const sim=new Simulation(seed);sim.start(level);let input={},steps=0;
+    const sim=new Simulation(seed);sim.start(level);if(mode==='balanced-no-art')sim.choiceTimer=Infinity;let input={},steps=0;
     while(sim.state==='active'&&sim.time<180){
       if(steps++%12===0)input=strategy(sim.snapshot(),mode);
       sim.tick(1/60,input);sim.drainEvents();

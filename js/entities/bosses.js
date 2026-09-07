@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.1';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.5.0';
 
 // A few articulated hero models, separate from the instanced infantry.
 export function createBosses(scene){
@@ -36,7 +36,8 @@ export function createBosses(scene){
         part('box',trim,[side*.85,.4,.35],[1.1,.8,1.65]);
         part('orb',armor,[side*1.65,4.8,0],[.95,.8,.9]);
         part('cone',trim,[side*1.8,5.6,0],[.3,1.4,.4],[0,0,-side*.3]);
-        part('box',armor,[side*1.9,3.7,.15],[.85,1.8,.85],[0,0,side*.1]);
+        const arm=new T.Group();arm.position.set(side*1.9,4.6,.15);group.add(arm);joints.push({mesh:arm,sweep:side});
+        part('box',armor,[0,-.9,0],[.85,1.8,.85],[0,0,side*.1],arm);
       }
       part('orb',armor,[0,4.1,0],[1.6,1.9,1.05]);part('box',trim,[0,3.25,.1],[3.1,.35,2.1]);
       part('orb',armor,[0,6.25,0],[1,1.1,.92]);part('box',glow,[0,6.35,.88],[1.35,.2,.15]);
@@ -67,11 +68,11 @@ export function createBosses(scene){
       m.group.position.set(e.x,dead?-.6*e.age:Math.sin(time*2)*.08,e.z);
       m.group.rotation.set(dead?-Math.min(1,e.age*1.7)*Math.PI*.48:0,-(e.yaw-Math.PI),dead?e.spin*.12:0);
       const windup=e.swing>0?1-e.swing/1.05:0,strike=e.swing<=0&&e.recovery>0?Math.sin(e.recovery/.45*Math.PI):0;
-      if(!dead){m.group.rotation.x=-windup*.22+strike*.28;m.group.rotation.z=Math.sin(windup*Math.PI)*.07;}
+      if(!dead){m.group.rotation.x=-windup*.3+strike*.38;m.group.rotation.z=Math.sin(windup*Math.PI)*.12;m.group.rotation.y+=windup*.32-strike*.6;}
       m.group.scale.setScalar(size*(dead?Math.max(.01,1-Math.max(0,e.age-3.3)*.75):1));
       m.armor.emissive.setHex(BOSS_TYPES[e.bossType].accent);m.armor.emissiveIntensity=(e.hit||0)*.5;
       m.glow.emissiveIntensity=1.2+Math.sin(time*4)*.5+windup*3;
-      if(!dead)for(const j of m.joints){if(j.strike)j.mesh.rotation.x=-windup*1.2+strike*1.8;else if(j.spin)j.mesh.rotation.z=time*.4;else j.mesh.rotation.x=Math.sin(time*3+j.phase)*.16;}
+      if(!dead)for(const j of m.joints){if(j.strike){j.mesh.rotation.x=-windup*1.5+strike*2.2;j.mesh.rotation.z=-windup*.5+strike*.65;}else if(j.sweep){j.mesh.rotation.x=-windup*1.3+strike*1.6;j.mesh.rotation.z=j.sweep*(windup*.65-strike*.85);}else if(j.spin)j.mesh.rotation.z=time*.4;else j.mesh.rotation.x=Math.sin(time*3+j.phase)*.16+windup*.4-strike*.6;}
     }
   }};
 }

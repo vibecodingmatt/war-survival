@@ -1,5 +1,6 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.4.1';
+import { randomSource } from '../core/math.js?v=0.5.0';
+import { createSpectacle } from './spectacle.js?v=0.5.0';
 const d=new T.Object3D(),direction=new T.Vector3(),up=new T.Vector3(0,1,0),color=new T.Color();
 function glowTexture(){
   const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
@@ -7,6 +8,7 @@ function glowTexture(){
   x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c);
 }
 export function createEffects(scene) {
+  const spectacle=createSpectacle(scene);
   const random=randomSource(491),particles=[],smoke=[],rings=[],scorches=[],beams=[];
   const glow=glowTexture();
   const sparkMesh=new T.InstancedMesh(new T.SphereGeometry(1,5,4),new T.MeshBasicMaterial({color:0xffffff,transparent:true,blending:T.AdditiveBlending,depthWrite:false}),900);
@@ -46,6 +48,7 @@ export function createEffects(scene) {
     if(scorches.length>28){const old=scorches.shift();scene.remove(old);old.geometry.dispose();old.material.dispose();}
   }
   function handle(event) {
+    spectacle.handle(event);
     if(event.type==='beam'&&beams.length<70){
       const geometry=new T.BufferGeometry().setFromPoints([new T.Vector3(event.x,event.y,event.z),new T.Vector3((event.x+event.tx)/2+.25,(event.y+event.ty)/2+.3,(event.z+event.tz)/2),new T.Vector3(event.tx,event.ty,event.tz)]);
       const mesh=new T.Line(geometry,new T.LineBasicMaterial({color:event.color,transparent:true,opacity:.9,blending:T.AdditiveBlending}));scene.add(mesh);beams.push({mesh,life:.13});
@@ -96,11 +99,13 @@ export function createEffects(scene) {
   function removeGroup(group){scene.remove(group);group.traverse(o=>{o.geometry?.dispose();if(o.material)o.material.dispose();});}
   return {
     handle,
-    reset(){particles.length=0;smoke.length=0;for(const r of rings){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();}rings.length=0;
+    reset(){spectacle.reset();particles.length=0;smoke.length=0;for(const r of rings){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();}rings.length=0;
       for(const b of beams){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();}beams.length=0;
       for(const s of scorches){scene.remove(s);s.geometry.dispose();s.material.dispose();}scorches.length=0;
       for(const v of zoneVisuals.values())removeGroup(v.group);zoneVisuals.clear();shotLife=blastLife=0;},
-    update(sim,dt,time,camera){
+    snapshot:()=>spectacle.snapshot(),
+    update(sim,dt,time,camera,reduced=false){
+      spectacle.update(sim,dt,time,reduced);
       for(let i=beams.length-1;i>=0;i--){const b=beams[i];b.life-=dt;b.mesh.material.opacity=Math.max(0,b.life*7);if(b.life<=0){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();beams.splice(i,1);}}
       drawParticles(sparkMesh,particles,dt,11,camera);drawParticles(smokeMesh,smoke,dt,-.1,camera);
       shotLife=Math.max(0,shotLife-dt);blastLife=Math.max(0,blastLife-dt);
@@ -112,8 +117,8 @@ export function createEffects(scene) {
       const bullets=sim.bullets;bulletMesh.count=bulletGlow.count=Math.min(360,bullets.length);
       for(let i=0;i<bulletMesh.count;i++){
         const b=bullets[i];direction.set(b.tx-b.x,b.ty-b.y,b.tz-b.z).normalize();
-        const width=b.weaponLevel===4?2.8:1;
-        d.position.set(b.x,b.y,b.z);d.quaternion.setFromUnitVectors(up,direction);d.scale.set(width,b.weaponLevel===3?1.65:1.25,width);d.updateMatrix();
+        const width=b.prism?3:b.weaponLevel===4?2.8:1;
+        d.position.set(b.x,b.y,b.z);d.quaternion.setFromUnitVectors(up,direction);d.scale.set(width,b.prism?2.4:b.weaponLevel===3?1.65:1.25,width);d.updateMatrix();
         bulletMesh.setMatrixAt(i,d.matrix);bulletGlow.setMatrixAt(i,d.matrix);
         color.setHex(b.color||0xffdf94);bulletMesh.setColorAt(i,color);bulletGlow.setColorAt(i,color);
       }

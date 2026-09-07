@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.4.1';
+import { randomSource } from '../core/math.js?v=0.5.0';
 
 export function createVolcano(root,surfaces,clock,cloudMap) {
   const atmosphere=root,landmark=new T.Group();root.add(landmark);root=landmark;

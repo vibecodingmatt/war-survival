@@ -1,4 +1,4 @@
-# Borderlands campaign balance · v0.4.1
+# Borderlands campaign balance · v0.5.0
 
 Pressure is fixed in data/waves.js. Successive sectors increase enemy count,
 health and speed, with different equipment and boss patterns. There is no hidden
@@ -13,6 +13,28 @@ on the next weapon instead of waiting for its replacement to arrive under pressu
 Supply pods grant Overdrive (nine seconds), Rally (twelve seconds), Shield (30,
 capped at 50), or Repair (20 integrity). Every eight unshielded damage costs a
 soldier. Wave clears restore ten integrity, but soldiers must be recruited again.
+
+## Rift choices and heavy impacts
+
+Every sector offers linked rewards, first after eight seconds, then eighteen seconds
+after the last pair resolves or passes. Cards travel for about 11.7 seconds, with
+1.2 seconds to read before shooting can start a roughly 1.05-second charge. Taking
+one invalidates both targets before any reward is granted. Normal side-lane
+supplies pause, preserving their progress; center-lane combat and pods continue.
+
+The left card offers six soldiers or, at full strength, 35 shield capped at 60.
+The right rotates Starfall (eight seconds, three area strikes every 1.35 seconds),
+Tesla Halo (ten seconds, three arc drones every 0.8 seconds), and Prism Overload
+(eight seconds, 1.5x combat shot damage plus three 65% ricochets). Power damage
+does not collect recruit cards or weapon goals. Rewards, timers and airborne
+survivors reset on restart; the pause menu freezes gameplay timers.
+
+Large swipes launch 16% of the squad, champions 10%, rounded up. Shield absorption
+reduces the fraction launched. The usual eight-damage casualty rule determines
+permanent losses; other launched soldiers stop firing and recover over 2.2 seconds.
+Fully absorbed hits launch nobody. After an unshielded heavy hit, 0.85 seconds of
+recovery prevents overlapping shells from repeatedly hurting the squad in flight;
+breaches still deal damage. There is no forced launch on a successfully dodged hit.
 
 ## Champion encounters and contact
 
@@ -34,33 +56,36 @@ decide the run. Boss waves lasting more than 65 seconds enrage and summon guards
 npm run test:balance checks ten sectors, three seeds (731, 19, 2048), and four
 movement policies. Tactical decisions occur every 0.2 seconds. The policy only
 chooses movement and artillery; all shots, upgrades, recruits and damage use the
-ordinary simulation. It retreats from approaching ranks, dodges laterally when
-needed, and pursues upgrades during the lull at the end of a wave.
+ordinary simulation. It retreats from approaching ranks, gives telegraphed guardian swings priority
+over infantry distance, chooses one rift reward, and pursues upgrades during lulls.
 
 | Policy | Results across 30 runs |
 | --- | --- |
 | Neglect recruitment and weapon upgrades | 30 defeats |
 | Focus recruitment, neglect stronger weapons | 30 defeats |
-| Focus weapons, neglect recruitment | 30 defeats |
+| Focus weapons, neglect recruitment | 28 defeats; 2 introductory-sector victories |
 | Blend recruitment, weapons, defense, dodging and artillery | 30 victories |
 
-| Sector | Completion time | Remaining integrity | Soldiers lost during run |
-| --- | --- | --- | --- |
-| 1 | 68–71s | 100 | 0 |
-| 2 | 86–88s | 100 | 0 |
-| 3 | 69–73s | 100 | 0 |
-| 4 | 75–76s | 100 | 0 |
-| 5 | 74–75s | 94–100 | 0–3 |
-| 6 | 81s | 80–84 | 2–5 |
-| 7 | 83–90s | 79–100 | 1–3 |
-| 8 | 87–90s | 51–78 | 5–8 |
-| 9 | 88–91s | 27–68 | 6–11 |
-| 10 | 93–97s | 30–44 | 9–11 |
+| Sector | Completion time | Remaining integrity | Soldiers lost during run | Soldiers launched |
+| --- | --- | --- | --- | --- |
+| 1 | 70–74s | 100 | 0 | 0 |
+| 2 | 83–85s | 100 | 0–1 | 0 |
+| 3 | 69–74s | 83–100 | 1–4 | 0–7 |
+| 4 | 78–81s | 100 | 0–2 | 0 |
+| 5 | 78–79s | 86–100 | 0–4 | 0 |
+| 6 | 80–82s | 69–100 | 0–6 | 0–3 |
+| 7 | 88–89s | 50–91 | 1–8 | 0–14 |
+| 8 | 86–93s | 7–34 | 10–13 | 14–20 |
+| 9 | 87–90s | 34–91 | 1–10 | 0–15 |
+| 10 | 93–98s | 19–53 | 8–12 | 4–24 |
 
-The final three sectors also assert at least one completed melee hit, boss swipe
-and soldier casualty per tactical run, followed by victory. These are automated
-sample outcomes, not promised human completion rates. Replacement recruits mean
-the final squad size does not by itself measure the losses sustained.
+These are automated sample outcomes, not promised human completion rates. Strong
+weapons plus a rift power can carry the introductory sector without recruits;
+the same policy loses in every later sector in these checks. Strong
+power timing or a shield can prevent a hit entirely, so individual late runs need
+not lose soldiers. Separate mechanics tests verify percentage launches, casualties,
+shield protection, invulnerability and survivors resuming fire after recovery.
+Replacement recruits mean final squad size alone does not measure losses.
 
 ## Browser and progression checks
 

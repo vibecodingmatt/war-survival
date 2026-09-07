@@ -1,6 +1,6 @@
 # War: Survival
 
-**The Borderlands Campaign · v0.4.1**
+**The Borderlands Campaign · v0.5.0**
 
 A browser squad survival game with ten short, escalating levels. Recruit soldiers,
 catch moving weapon upgrades, and defeat each sector's guardian. Every level starts
@@ -74,6 +74,27 @@ or explosive splash. Routes are fixed per sector in this iteration.
 - **Explosive carts, from sector 3:** shooting a red powder cart blasts nearby
   enemies and can start a chain reaction. Friendly artillery also detonates carts.
 
+**Rift choices arrive in every sector.** Two linked cards drift toward the squad:
++6 soldiers on the left, a temporary power on the right. Hold fire on one for a
+short volley to claim it; its partner closes immediately. A full squad gets a
++35 Aegis shield alternative (capped at 60). The cards have an opening grace period
+and expire if ignored. Regular recruit and weapon boards pause during the choice,
+then return with their progress intact. The center lane remains dangerous.
+
+| Rift power | Effect |
+| --- | --- |
+| Starfall · 8 seconds | Repeated comet volleys blast clustered enemies into the air |
+| Tesla Halo · 10 seconds | Three orbiting drones fire chaining lightning while your squad moves or pursues supplies |
+| Prism Overload · 8 seconds | Enhanced shots ricochet through three nearby enemies; your permanent gun stays equipped |
+
+Unshielded guardian swipes launch roughly 16% of the squad; champion swipes launch
+10%, rounded up. Damage determines casualties, while other thrown soldiers stop
+firing and recover into formation over 2.2 seconds. Partial shields reduce the
+number launched, and a shield that absorbs the hit protects the whole squad.
+A heavy hit gives 0.85 seconds of recovery against overlapping attacks; enemies
+can still breach. Sweeping shockwaves, tumbling bodies, energy trails and impact
+audio show the hit, and the shield has a visible energy dome.
+
 Artillery reloads in 14 seconds. Clearing a wave restores 10 integrity. Every eight
 unshielded damage costs a soldier, down to the last survivor; zero integrity loses
 the level. Fallen soldiers and defeated bosses animate on the bridge. All weapons,
@@ -107,6 +128,7 @@ npm install
 npm run test:browser
 npm run test:mobile
 npm run test:campaign
+npm run test:fun
 ```
 
 Browser checks require Chrome and a running server. Set `CHROME_PATH` for another
@@ -116,6 +138,7 @@ Chrome executable, `PLAYWRIGHT_MODULE` for an existing Playwright installation, 
 
 Checks cover ten-sector pressure, exclusive lane targeting, supply expiration,
 casualties, weapon effects, boosts, cart explosions, boss attacks, multi-seed balance,
+exclusive rift rewards, power expiry, percentage launches and airborne recovery,
 keyboard/mouse input, next-level progression, saved completion, eight touch layouts,
 multi-touch artillery, and full campaign playthroughs. Mobile coverage uses Chrome
 emulation; physical iOS/Android performance has not been benchmarked.

@@ -1,6 +1,7 @@
 import * as T from '../../vendor/three.module.min.js';
-import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.4.1';
-import { createSupplies } from './supplies.js?v=0.4.1';
+import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.5.0';
+import { createSupplies } from './supplies.js?v=0.5.0';
+import { createChoiceTargets } from './choices.js?v=0.5.0';
 
 function canvasTexture(width,height,draw){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
@@ -9,7 +10,7 @@ function canvasTexture(width,height,draw){
   return {canvas,ctx,texture};
 }
 export function createTargets(scene){
-  const recruits=new Map(),supplies=createSupplies(scene);
+  const recruits=new Map(),supplies=createSupplies(scene),choices=createChoiceTargets(scene);
   const card=canvasTexture(160,160,(ctx,w,h)=>{
     const fill=ctx.createLinearGradient(0,0,0,h);fill.addColorStop(0,'#46caff');fill.addColorStop(1,'#125bba');
     ctx.fillStyle=fill;ctx.fillRect(0,0,w,h);ctx.strokeStyle='#a3e6ff';ctx.lineWidth=5;ctx.strokeRect(6,6,w-12,h-12);
@@ -46,7 +47,8 @@ export function createTargets(scene){
   return {
     update(sim,time){
       supplies.update(sim,time);
-      const ids=new Set(sim.recruits.filter(r=>r.hp>0&&sim.player.squad<MAX_SQUAD).map(r=>r.id));
+      choices.update(sim,time);
+      const ids=new Set(sim.recruits.filter(r=>!sim.choice&&r.hp>0&&sim.player.squad<MAX_SQUAD).map(r=>r.id));
       for(const [id,group] of recruits)if(!ids.has(id)){scene.remove(group);recruits.delete(id);}
       for(const target of sim.recruits){
         if(!ids.has(target.id))continue;
@@ -55,7 +57,7 @@ export function createTargets(scene){
         group.position.set(target.x,1.02+Math.sin(time*2+target.id)*.045,target.z);
         group.rotation.x=-.08;group.scale.setScalar(1);
       }
-      armory.visible=!!sim.armory;
+      armory.visible=!!sim.armory&&!sim.choice;
       const remaining=sim.armory?(SUPPLY_EXIT-sim.armory.z)/sim.levelData.weaponSpeed:0;
       const key=(sim.armory?sim.armory.id+':'+Math.ceil(sim.armory.hp):'none')+':'+Math.ceil(remaining)+':'+sim.player.weaponLevel+':'+sim.level;
       if(sim.armory&&key!==previous&&(time-lastDraw>.1||lastLevel!==sim.player.weaponLevel)){drawArmory(sim.armory,sim.weapons[sim.player.weaponLevel],remaining);previous=key;lastDraw=time;lastLevel=sim.player.weaponLevel;}
@@ -64,6 +66,6 @@ export function createTargets(scene){
       armory.rotation.z=Math.sin(time*42)*hit*.009;
       sideMat.emissive.setHex(sim.focus==='recruits'?0x13578c:0x000000);
     },
-    snapshot:()=>({recruits:recruits.size,armory:armory.visible,armoryZ:armory.position.z}),
+    snapshot:()=>({recruits:recruits.size,armory:armory.visible,armoryZ:armory.position.z,choice:choices.snapshot().visible}),
   };
 }

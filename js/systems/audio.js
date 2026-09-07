@@ -48,7 +48,13 @@ export class BattlefieldAudio {
     if(e.type==='wave'){this.tone(220,1.1,.09,'triangle');this.tone(330,.9,.05);}
     if(e.type==='recruit'){this.tone(660,.16,.065);this.tone(880,.22,.04);}
     if(e.type==='weapon'){this.tone(440,.45,.1);this.tone(660,.6,.1);this.tone(990,.8,.07);}
-    if(e.type==='powerup'){this.tone(880,.35,.08);this.tone(1320,.45,.05);}
+    if(e.type==='powerup'){this.tone(440,.8,.12);this.tone(880,.65,.1);this.tone(1320,.9,.05);}
+    if(e.type==='choiceOpen'){this.tone(660,.45,.07);this.tone(990,.7,.055);}
+    if(e.type==='choiceTaken'){this.tone(1100,.6,.11);this.noiseHit(.35,.14,2600);}
+    if(e.type==='bossSwing'){this.noiseHit(.32,.25,3600);this.tone(92,.35,.18);}
+    if(e.type==='bossImpact'){this.noiseHit(.65,.55,1800);this.tone(52,.7,.3);}
+    if(e.type==='shieldBlock'){this.tone(760,.7,.12);this.tone(1140,.65,.08);}
+    if(e.type==='powerBeam'&&now-(this.lastArc||0)>.12){this.lastArc=now;this.tone(e.color===0xeb9dff?940:1400,.1,.045,'triangle');}
     if(e.type==='warning')this.tone(380,.3,.075,'triangle');
     if(e.type==='victory'){this.tone(440,1.4,.14);this.tone(660,1.5,.1);this.tone(880,1.3,.05);}
     if(e.type==='defeat')this.tone(130,1.7,.16);

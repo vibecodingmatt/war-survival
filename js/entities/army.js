@@ -1,8 +1,9 @@
 import * as T from '../../vendor/three.module.min.js';
-import { formation } from '../core/math.js?v=0.4.1';
-import { MAX_SQUAD } from '../../data/waves.js?v=0.4.1';
-import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.4.1';
-import { createBosses } from './bosses.js?v=0.4.1';
+import { formation } from '../core/math.js?v=0.5.0';
+import { MAX_SQUAD } from '../../data/waves.js?v=0.5.0';
+import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.5.0';
+import { createBosses } from './bosses.js?v=0.5.0';
+import { flightPose } from '../core/flight.js?v=0.5.0';
 
 const root = new T.Object3D(), limb = new T.Object3D(), partTransform = new T.Object3D();
 const world = new T.Matrix4(), joint = new T.Matrix4(), tint = new T.Color();
@@ -147,8 +148,14 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
           root.rotation.x=-progress*Math.PI*.48;root.rotation.z=Math.sin(age*3)*.25+unit.spin*progress*.27;
           if(age>3.8)root.position.y-=(age-3.8)*1.7;
           root.scale.multiplyScalar(Math.max(.01,Math.min(1,(5-age)*1.3)));
+          if(unit.flight){const pose=flightPose(unit);root.position.set(pose.x,pose.y,pose.z);root.rotation.set(pose.rx,pose.ry,pose.rz);}
         }
         if(blue&&recoils&&!dead)root.rotation.x=-recoils[i]*.045;
+        if(unit.knockup){
+          const pose=flightPose(unit.knockup),landing=2*unit.knockup.flight.vy/15,t=Math.max(0,Math.min(1,(unit.knockup.age-landing)/(2.2-landing))),returning=t*t*(3-2*t);
+          root.position.set(pose.x+(unit.x-pose.x)*returning,pose.y*(1-returning),pose.z+(unit.z-pose.z)*returning);
+          root.rotation.set(pose.rx*(1-returning),pose.ry*(1-returning),pose.rz*(1-returning));
+        }
         root.updateMatrix();
         for(const p of parts){
           limb.position.set(0,0,0);limb.rotation.set(0,0,0);
@@ -181,7 +188,7 @@ export function createArmies(scene) {
   return {
     update(sim,time) {
       const p=sim.player;
-      for(let i=0;i<p.squad;i++){const f=formation(i,p.squad),u=blueUnits[i];u.x=p.x+f.x;u.z=p.z+f.z;u.phase=time*10+i*.8;}
+      for(let i=0;i<p.squad;i++){const f=formation(i,p.squad),u=blueUnits[i];u.x=p.x+f.x;u.z=p.z+f.z;u.phase=time*10+i*.8;u.knockup=sim.knockups.find(unit=>unit.index===i)||null;}
       const weapon=sim.weapon;
       if(!squads.has(weapon.id))squads.set(weapon.id,createArmy(scene,MAX_SQUAD*2,true,false,weapon.model));
       for(const [id,squad] of squads){
