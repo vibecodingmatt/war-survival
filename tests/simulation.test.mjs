@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Simulation } from '../js/core/simulation.js';
 import { LIMITS, MAX_SQUAD, WAVES, WEAPONS, LEVELS, SUPPLY_EXIT } from '../data/waves.js';
 import { strategy } from './strategy.mjs';
+import { WEAPON_LIBRARY, BOSS_TYPES } from '../data/campaign.js';
 function advance(sim,seconds,input={}){for(let i=0;i<seconds*60;i++){sim.tick(1/60,input);sim.drainEvents();}}
 function fresh(){const sim=new Simulation();sim.start();return sim;}
 test('movement is bounded, normalized, and manual movement overrides lane steering',()=>{
@@ -116,4 +117,59 @@ test('unupgraded play loses even with artillery; blended play can win across see
     assert.equal(sim.state,mode==='none'?'defeat':'victory','level '+(level+1)+' '+mode+' seed '+seed);
     if(mode!=='none'){assert.ok(sim.recruited>=20);assert.equal(sim.player.weaponLevel,4);}
   }
+});
+
+test('ten sectors increase enemy pressure and use complete, distinct equipment routes',()=>{
+  assert.equal(LEVELS.length,10);assert.equal(new Set(LEVELS.map(l=>l.world.biome)).size,10);
+  const guns=new Set();
+  LEVELS.forEach((level,i)=>{
+    assert.equal(level.weapons.length,4);level.weapons.forEach(w=>guns.add(w.id));
+    if(i)for(let wave=0;wave<4;wave++)for(const stat of ['hp','count','speed'])assert.ok(level.waves[wave][stat]>LEVELS[i-1].waves[wave][stat],`sector ${i+1} wave ${wave+1}: ${stat}`);
+    if(i>=2)assert.equal(level.waves.filter(w=>w.boss).length,2);
+    assert.ok(BOSS_TYPES[level.world.boss]);
+  });assert.equal(guns.size,10);
+});
+test('supply pods grant one boost, shields absorb damage, and restarting clears effects',()=>{
+  const sim=fresh();sim.start(2);sim.player.health=60;
+  for(const kind of ['repair','shield','overdrive','rally']){
+    const pod={type:'pod',kind,hp:1,x:0,z:0,scale:1};sim.damage(pod,1,false);sim.damage(pod,1,false);
+  }
+  assert.equal(sim.podsOpened,4);assert.equal(sim.player.health,80);assert.equal(sim.shield,30);
+  sim.hurt(20);assert.equal(sim.player.health,80);assert.equal(sim.shield,10);assert.equal(sim.player.squad,9);
+  sim.damage(sim.recruits[0],1,false);assert.equal(sim.player.squad,11);
+  sim.player.squad=41;sim.damage(sim.recruits[1],1,false);assert.equal(sim.player.squad,42);assert.equal(sim.recruits.length,0);
+  sim.pause();advance(sim,5);assert.equal(sim.buffs.overdrive,9);sim.start(2);
+  assert.equal(sim.shield,0);assert.equal(sim.buffs.rally,0);assert.equal(sim.podsOpened,0);
+});
+test('explosive carts trigger once and damage nearby enemies without harming supplies',()=>{
+  const sim=fresh();sim.start(2);const cart=sim.enemies.find(e=>e.type==='cart');
+  const neighbor=sim.enemies.find(e=>e!==cart);neighbor.x=cart.x;neighbor.z=cart.z;const hp=neighbor.hp,goal=sim.armory.hp;
+  sim.damage(cart,cart.hp,false);sim.damage(cart,99999,false);
+  assert.equal(sim.cartsDestroyed,1);assert.ok(neighbor.hp<hp);assert.equal(sim.armory.hp,goal);assert.equal(sim.player.health,100);
+});
+test('frost, fire, lightning and rail weapons have different gameplay effects',()=>{
+  for(const id of ['frost','flame','arc','rail']){
+    const sim=fresh(),a=sim.enemies[0],b=sim.enemies[1];b.x=a.x;b.z=a.z-1;
+    const hp=b.hp;sim.weaponImpact({target:a},WEAPON_LIBRARY[id]);
+    if(id==='frost')assert.ok(a.slow>0);
+    if(id==='flame'){assert.ok(a.burn>0&&a.burnDamage>0);advance(sim,.1);assert.ok(a.hp<a.maxHp);}
+    if(id==='arc'||id==='rail')assert.ok(b.hp<hp);
+    assert.equal(sim.player.health,100);
+  }
+});
+test('boss families use distinct telegraphed attacks and bounded reinforcements',()=>{
+  const sim=fresh();sim.start(9);
+  for(const kind of ['marshal','oracle','sovereign']){
+    sim.zones=[];const before=sim.enemies.length;sim.bossAttack({bossType:kind,z:-20});
+    assert.ok(sim.zones.every(z=>!z.friendly&&z.remaining>=1.4));
+    if(kind==='marshal')assert.deepEqual(sim.zones.map(z=>z.x),[-3.8,0,3.8]);
+    if(kind==='oracle')assert.equal(new Set(sim.zones.map(z=>z.z)).size,3);
+    if(kind==='sovereign')assert.equal(sim.enemies.length,before+5);
+  }
+});
+
+test('prolonged boss waves enrage instead of permitting indefinite side-lane camping',()=>{
+  const sim=fresh();sim.start(4);sim.beginWave(3);const boss=sim.enemies.find(e=>e.type==='boss');sim.enemies=[boss];sim.waveTime=66;
+  sim.bossAttack(boss);assert.equal(boss.enraged,true);assert.equal(sim.enemies.filter(e=>e.type==='brute').length,6);
+  assert.ok(sim.drainEvents().some(e=>e.text?.includes('ENRAGED')));
 });

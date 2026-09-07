@@ -1,125 +1,98 @@
 # War: Survival
 
-**The Ember Gate — mobile update, v0.3.2**
+**The Borderlands Campaign · v0.4.0**
 
-Lead a blue rifle squad against the Crimson Legion on a ruined stone bridge above
-a jungle gorge. Beat **Level 1: Ashen Crossing** (617 enemies), then take on
-**Level 2: Ember Gate** (741 enemies) at dusk, with faster formations, heavier
-armor, shorter supply windows, and the Ember Marshal's three-impact attacks.
-Both levels have four waves and can be selected immediately for playtesting.
-Each starts with nine riflemen; beating Level 1 offers a Next Level button.
+A browser squad survival game with ten short, escalating levels. Recruit soldiers,
+catch moving weapon upgrades, and defeat each sector's guardian. Every level is
+available immediately for playtesting, starts with nine riflemen, and has four waves.
+Completed sectors are marked locally in your browser. Winning offers the next sector;
+beating the Sky Citadel completes the campaign.
 
 **Play:** https://vibecodingmatt.github.io/war-survival/
 
 ## Controls
 
-| Action | Desktop | Touch |
+| Action | Desktop | Phone / tablet |
 | --- | --- | --- |
-| Move squad | WASD / arrow keys, or click and drag | Drag on the battlefield |
-| Fire rifles | Automatic | Automatic |
-| Recruit +1 | Move left, press 1, or click the left lane button | Move left or tap +1 Soldier |
-| Shoot enemies | Move to center, press 2, or click Hold the Line | Center or tap Hold the Line |
-| Upgrade guns | Move right, press 3, or click Bigger Guns | Move right or tap the next weapon button |
-| Artillery barrage | Space or Artillery button | Artillery button |
-| Pause | Esc or pause button | Pause button |
-| Sound | Speaker button | Speaker button |
+| Move and aim | WASD, arrows, or drag | Drag anywhere on the battlefield |
+| Recruit soldiers | Move left; shortcut 1 | Move left |
+| Shoot enemies / supply pods | Move center; shortcut 2 | Move center |
+| Upgrade weapons | Move right; shortcut 3 | Move right |
+| Artillery | Space or Artillery button | Tap Artillery; a second finger works while dragging |
+| Pause / graphics | Esc or pause button | Pause button |
 
-Your position selects what the squad shoots. The lane buttons (or 1 / 2 / 3)
-steer you to the corresponding lane; manual movement takes over immediately.
+Firing is automatic. Lifting your finger stops movement. The persistent lane buttons,
+lane instructions, and separate weapon panel have been removed from battle. The
+moving boards show their own information. Instructions are in the menu and pause help.
+The HUD keeps squad integrity, the equipped weapon, temporary boosts, and Artillery.
 
-- **Left:** each blue +1 board you shoot adds exactly one soldier, up to 42.
-  Boards arrive in bursts of up to six, about 10–11 seconds apart. They disappear
-  at the squad cap and return after casualties. Walking into them grants nothing.
-- **Center:** shoot the horde. It keeps advancing while you invest in upgrades.
-- **Right:** work down a tougher weapon goal. Partial damage stays when you
-  switch lanes or finish a wave, **until that board passes the squad**.
-  Boards float down the right lane with a visible countdown (about 21 seconds
-  in Level 1, 16 in Level 2). A missed goal returns after a 4–5 second gap with
-  full health. The next gun also arrives after a short gap when you unlock one.
+## Campaign
 
-Weapons progress through **Volley Rifle → Repeater → Gatling → Siege Cannon**.
-Each changes the actual model, fire rate, damage, sound, and tracer effects;
-the Siege Cannon adds splash damage. Weapon goals cost 650, 2,800, and 8,500
-damage, so a larger squad helps unlock them faster.
+| Sector | World | Guardian |
+| --- | --- | --- |
+| 01 · Ashen Crossing | Sunlit jungle gorge and waterfalls | Crimson Warden |
+| 02 · Ember Gate | Dusk ruins, beacons and lanterns | Ember Marshal |
+| 03 · Jade Cascades | Bamboo, twin falls, rain and a faint rainbow | Tidal Oracle |
+| 04 · Frostglass Pass | Ice spires, snow and an aurora | Glacier King |
+| 05 · Sunscar Oasis | Sandstone arches and an oasis | Brass Scarab |
+| 06 · Tempest Reach | Monoliths, rainfall and distant lightning | Storm Herald |
+| 07 · Amber Sanctuary | Autumn trees, pagodas and drifting lanterns | Autumn Ronin |
+| 08 · Cinder Caldera | Basalt, glowing lava and a volcanic crater | Furnace Colossus |
+| 09 · Lumen Wilds | Moonlit mushrooms and fireflies | Spore Empress |
+| 10 · The Sky Citadel | Floating islands and an eclipse gate | Eclipse Sovereign |
 
-Waves advance automatically after a three-second breather, restoring 10 integrity
-without granting soldiers or weapons. Red circles mark incoming impacts.
-Artillery reloads every 14 seconds and damages only enemies.
-Every eight accumulated integrity damage costs one rifleman, down to the last
-soldier; losses animate on the bridge. Healing between waves does not replace
-soldiers. Recruitment rebuilds your firepower; reaching zero integrity ends the run.
-The pause menu includes a **Balanced** graphics setting.
+Enemy count, health, and speed increase each sector. Levels 3–10 introduce a champion
+in wave two or three as well as the final guardian. Five boss silhouettes include
+armored knights, siege tanks, six-legged crawlers, crystal guardians, and winged
+oracles. Salvos, sweeping strikes, cross patterns, and summoned reinforcements require
+different movement. Attacks show red warning zones before dealing damage. Prolonged
+boss waves trigger an enrage and repeated elite reinforcements; a guardian cannot
+be safely stalled forever while ignoring upgrades.
 
-## Mobile web
+## Weapons and battlefield opportunities
 
-Touch devices show drag-and-tap instructions throughout the menu, HUD, pause
-help, and accessibility labels. Keyboard shortcuts remain available for desktop
-players and appear when a physical keyboard is used.
+Each sector has an equipment route, shown in its menu description. The ten weapons
+are Volley Rifle, Repeater, Gatling, Siege Cannon, Frost Lance, Arc Coil, Dragon
+Breath, Rail Driver, Hailstorm, and Sunforge. They have distinct gun models, shot
+colors, sounds, and damage behavior: freezing, chain lightning, burning, piercing,
+or explosive splash. Routes are fixed per sector in this iteration.
 
-- Drag anywhere on the bridge to move; lifting your finger stops movement.
-  A small dead zone filters finger jitter. Beginning a drag cancels lane steering.
-- Lane buttons respond on touch-down. A second finger can tap Artillery while
-  the first keeps moving the squad.
-- Phone controls use at least 44px touch targets, larger text, and screen inset
-  spacing. Portrait, landscape, and tablet layouts keep the controls separate.
-  Short phone screens use adjusted camera framing to keep the squad visible.
-- The next weapon, remaining damage, countdown, and progress appear inside the
-  right lane button on touch screens. The floating menu is hidden so it cannot
-  cover approaching weapon boards. The button reads Cannon for Siege Cannon.
-- Rotating during combat pauses the game and releases held movement. Tap
-  Return to Battle after rotating; browser toolbar height changes do not pause.
-- Touch devices default to Balanced graphics: pixel ratio capped at 1, 1024px
-  shadow maps, and no blur behind HUD cards. Phone rendering is limited to about
-  60 frames per second, and HUD updates run at 10Hz. Combat keeps its fixed 60Hz
-  simulation. High graphics remains available in the pause menu.
+- **Recruit boards:** +1 per shot, up to 42 soldiers. Boards come in short bursts,
+  disappear at full strength, and return after casualties. Touching a board does
+  not collect it.
+- **Weapon goals:** move down the right lane. Partial damage survives changing
+  lanes and waves, until the board passes. Misses return after a brief gap with
+  full health. Later weapons must be pursued before the horde gets close; later
+  sectors can offer the second upgrade during the first wave.
+- **Supply pods, from sector 3:** shoot the center-lane crate for Overdrive
+  (faster shooting for nine seconds), Aegis (30 shield, capped at 50), Rally
+  (double recruits for twelve seconds), or Field Repair (+20 integrity).
+- **Explosive carts, from sector 3:** shooting a red powder cart blasts nearby
+  enemies and can start a chain reaction. Friendly artillery also detonates carts.
 
-Mobile verification uses Chrome touch emulation at eight sizes from 320×568 to
-768×1024, including landscape and simulated notched-screen insets. It covers
-multi-touch artillery, drag release, rotation, text/labels, weapon readout clearance
-against the projected approaching board, full-squad visibility,
-and a complete Level 2 run. Physical iOS/Android performance is not benchmarked.
+Artillery reloads in 14 seconds. Clearing a wave restores 10 integrity. Every eight
+unshielded damage costs a soldier, down to the last survivor; zero integrity loses
+the level. Fallen soldiers and defeated bosses animate on the bridge. All weapons,
+supplies, health, and buffs reset when restarting or moving to a new level.
 
-## Local development
+## Mobile and rendering
 
-Requires Node.js 18 or newer. No dependency install or build is needed to play:
+Touch devices show no keyboard instructions, default to Balanced graphics (pixel
+ratio 1 and 1024px shadows), and target 60 renders per second. Combat advances at a
+fixed 60Hz. Drag input includes a small jitter dead zone. Rotation pauses combat
+and releases movement; browser toolbar height changes do not pause it. High graphics
+is available in the pause menu. Reduced motion suppresses lightning flashes and
+camera shake, and softens ambient movement.
 
-```sh
-npm start
-```
+Scenery uses bundled textures, instanced geometry, animated water, soft mist,
+wind-driven foliage, and bounded weather particles. Sector scenery is disposed when
+switching worlds; weapon models are cached as they are encountered. There is no
+runtime CDN, backend, account, installation, or asset-generation service.
 
-Open **http://127.0.0.1:4173/war-survival/**. The local server also supports the root
-URL. ES modules and textures require HTTP hosting; double-clicking the HTML file
-is not supported.
+## Development and verification
 
-## Project layout
-
-```text
-index.html                    Menus, HUD, and accessible controls
-css/style.css                 Responsive interface
-css/mobile.css                Touch instructions, phone/tablet layouts, safe areas
-js/main.js                    Browser startup, input, camera, and UI
-js/core/simulation.js          Fixed-step gameplay, damage, waves, and progression
-js/core/math.js                Seeded random numbers and formation helpers
-js/entities/army.js            Instanced troop models and animation
-js/world/environment.js       Bridge, gorge, ruins, vegetation, water, and lighting
-js/world/targets.js           Approaching +1 boards and the weapon goal display
-js/systems/effects.js          Tracers, sparks, smoke, explosions, and target hits
-js/systems/audio.js            Procedural sound and ambience
-data/waves.js                 Wave pressure, weapon stats, and upgrade costs
-assets/textures/              Bundled surface textures and environment lighting
-vendor/                       Pinned Three.js 0.180.0 and its HDR loader
-scripts/serve.mjs              Dependency-free local preview server
-tests/                        Simulation and browser checks
-docs/                         Reference observations, credits, and playtest notes
-references/gameplay/           Local reference video (ignored by Git)
-```
-
-The game has no runtime CDN, API, font, account, or backend dependency. All
-rendering libraries and textures are hosted with the site. Sound is synthesized
-locally. Sound preference and level completion checkmarks are stored in the
-browser when storage is available. Runs start fresh and no level is locked.
-
-## Verification
+Requires Node.js 18+. Start the dependency-free static server with `npm start`, then
+open **http://127.0.0.1:4173/war-survival/**. Opening the HTML directly is not supported.
 
 ```sh
 npm test
@@ -127,31 +100,30 @@ npm run test:balance
 npm install
 npm run test:browser
 npm run test:mobile
+npm run test:campaign
 ```
 
-The browser suite requires a running preview server and Chrome. Set
-`CHROME_PATH` to your Chrome executable on other platforms. `TEST_URL` can point
-to a deployed site. Browser screenshots go into ignored `test-results/`.
+Browser checks require Chrome and a running server. Set `CHROME_PATH` for another
+Chrome executable, `PLAYWRIGHT_MODULE` for an existing Playwright installation, or
+`TEST_URL` to check a deployed site. Screenshots and reports go into ignored
+`test-results/`. Test instrumentation exists only with `?test=1`.
 
-Simulation checks cover exclusive lane targeting, one-time recruit rewards,
-squad caps and replacement recruits, timed bursts, moving weapon deadlines,
-expired in-flight shots, all four weapon tiers, automatic waves, casualties,
-defeat, pause, artillery, level selection, restart, and multi-seed balance.
-Browser checks exercise keyboard, mouse, touch, lane buttons, target shooting,
-all gun unlocks, responsive layouts, both complete levels, the Next Level button,
-casualty/recruit visuals, missed goals, defeat, and replay.
-See [balance notes](docs/balance.md) for the tested strategies.
+Checks cover ten-sector pressure, exclusive lane targeting, supply expiration,
+casualties, weapon effects, boosts, cart explosions, boss attacks, multi-seed balance,
+keyboard/mouse input, next-level progression, saved completion, eight touch layouts,
+multi-touch artillery, and full campaign playthroughs. Mobile coverage uses Chrome
+emulation; physical iOS/Android performance has not been benchmarked.
 
-Test instrumentation is available only with `?test=1`; it is absent during
-normal play.
+Main files: `data/campaign.js` defines world palettes, bosses, and weapon routes;
+`data/waves.js` defines pressure; `js/core/simulation.js` handles gameplay;
+`js/world/ambience.js` builds biome landmarks and weather; `js/entities/bosses.js`
+builds guardians; `css/campaign.css` handles the sector menu and compact HUD.
 
 ## GitHub Pages
 
-This project uses the same publishing method as Dino Defense: the `main` branch,
-repository root. `.nojekyll` keeps the site as plain static files. All runtime
-asset paths work beneath `/war-survival/`.
+The `main` branch and repository root publish the static site. `.nojekyll` disables
+Jekyll processing. Paths work beneath `/war-survival/`; changed browser modules use
+a release query to prevent stale files from mixing after an update. Reference
+videos, dependencies, logs, and screenshots are excluded from Git.
 
-Push reviewed changes to `main` to publish a new version. The reference video,
-local screenshots, logs, and dependencies are excluded from Git.
-
-See [asset credits](docs/credits.md) and [reference notes](docs/gameplay-plan.md).
+See [asset credits](docs/credits.md) and [balance notes](docs/balance.md).

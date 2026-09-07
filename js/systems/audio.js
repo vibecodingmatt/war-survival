@@ -38,12 +38,17 @@ export class BattlefieldAudio {
   handle(e){
     if(!this.ctx||!this.enabled)return;
     const now=this.ctx.currentTime;
-    if(e.type==='shot'&&now-this.lastShot>.047){this.lastShot=now;const cannon=e.weaponLevel===4;this.noiseHit(cannon?.2:.1,cannon?.32:.22,e.weaponLevel===3?4700:3300);this.tone(cannon?85:125,cannon?.17:.09,cannon?.12:.08,'triangle');}
+    if(e.type==='shot'&&now-this.lastShot>.047){
+      this.lastShot=now;const energy=['frost','arc','rail','sun'].includes(e.weaponId),cannon=e.weaponLevel===4;
+      this.noiseHit(cannon?.2:.1,cannon?.25:.16,energy?1900:e.weaponId==='flame'?900:e.weaponLevel===3?4700:3300);
+      this.tone(energy?(e.weaponId==='arc'?520:340):cannon?85:125,cannon?.17:.09,energy?.045:.08,energy?'sine':'triangle');
+    }
     if(e.type==='explosion'){this.noiseHit(.7,.6,1800);this.tone(78,.5,.35);}
     if(e.type==='hurt'){this.tone(150,.19,.22,'triangle');this.noiseHit(.17,.12,700);}
     if(e.type==='wave'){this.tone(220,1.1,.09,'triangle');this.tone(330,.9,.05);}
     if(e.type==='recruit'){this.tone(660,.16,.065);this.tone(880,.22,.04);}
     if(e.type==='weapon'){this.tone(440,.45,.1);this.tone(660,.6,.1);this.tone(990,.8,.07);}
+    if(e.type==='powerup'){this.tone(880,.35,.08);this.tone(1320,.45,.05);}
     if(e.type==='warning')this.tone(380,.3,.075,'triangle');
     if(e.type==='victory'){this.tone(440,1.4,.14);this.tone(660,1.5,.1);this.tone(880,1.3,.05);}
     if(e.type==='defeat')this.tone(130,1.7,.16);

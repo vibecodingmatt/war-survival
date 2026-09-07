@@ -1,61 +1,72 @@
-# The Ember Gate — v0.3 balance
+# Borderlands campaign balance · v0.4.0
 
-Enemy pressure is fixed. Enemies do not scale in response to upgrades, and
-there is no scripted requirement to buy a gun. Losses come from enemy contact,
-incoming impacts, and breaches.
+Pressure is fixed in `data/waves.js`. Each successive sector increases the four
+waves' enemy count, base health, and movement speed. It does not secretly scale
+enemies against the player's equipment. New weapon routes and bosses change which
+tactics work well, so perceived difficulty is not a simple linear curve.
 
-| Wave | Level 1: formation / base HP / speed | Level 2: formation / base HP / speed |
+Every sector starts with nine riflemen and 100 integrity. Recruit bursts add one
+soldier per shot, capped at 42. Full squads hide the boards until casualties.
+Moving weapon goals cost 650, 2,800, and 8,500 damage; they expire at z = 20 and
+return after a short gap. Partial damage survives switching lanes and wave changes
+only until the board passes. Later sectors offer the second upgrade during wave
+one; postponing it until the next wave can waste that opportunity.
+
+Supply pods and powder carts enter from sector three. Their benefits are earned
+by shooting them. Overdrive lasts nine seconds, Rally twelve, Shield absorbs up
+to 30 damage per pod (50 maximum), and Repair restores 20 integrity. Incoming
+damage costs one soldier per eight damage that reaches squad integrity. Wave
+clears restore 10 integrity but do not restore soldiers.
+
+Bosses use four warning patterns across five body types. Sectors 3–10 also put a
+champion in wave two or three, at 32% of the final guardian's health. If a boss
+wave lasts over 65 seconds, it enrages, attacks more often, and summons elite
+guards. This prevents a weak squad from indefinitely dodging one stationary boss
+while repeatedly failing to finish the weapon board. Normal tactical victories
+complete boss waves before enrage.
+
+## Reproducible simulation checks
+
+`npm run test:balance` runs ten sectors, three seeds (731, 19, 2048), and four
+policies. Inputs are ordinary movement, automatic firing, and artillery, selected
+every 0.2 seconds. No policy grants free soldiers, damage, weapons, or health.
+
+| Policy | Result across 30 runs |
+| --- | --- |
+| Starting squad and rifle, with artillery | 30 defeats |
+| Recruit soldiers but keep the starting rifle | 30 defeats |
+| Upgrade weapons but skip recruiting | 30 defeats |
+| Blend recruitment, upgrades, defense, dodging and artillery | 30 victories |
+
+The blended policy targets 15/25/34/42 soldiers in sector one and 21/30/38/42
+afterward. It pursues weapon tier three during the first wave from sector three,
+then the final gun during wave three. It reacts to the board's remaining time
+and moves between three depths to evade ground attacks.
+
+| Sector | Sample completion time | Remaining integrity |
 | --- | --- | --- |
-| 1 | 80 / 62 / 1.8 | 104 / 76 / 2.1 |
-| 2 | 136 / 120 / 1.95 | 160 / 170 / 2.3 |
-| 3 | 184 / 230 / 2.1 | 216 / 310 / 2.5 |
-| 4 | 216 + boss / 320 / 2.2 | 260 + boss / 450 / 2.65 |
+| 1 | 71–72s | 100 |
+| 2 | 86s | 100 |
+| 3 | 67–68s | 100 |
+| 4 | 72s | 100 |
+| 5 | 70–74s | 100 |
+| 6 | 71–73s | 100 |
+| 7 | 77–79s | 100 |
+| 8 | 76–78s | 100 |
+| 9 | 77–80s | 65–74 |
+| 10 | 82–84s | 86 |
 
-Level 2 adds more armored troops and grenadiers. Its boss has 17,500 HP instead
-of 11,500, fires three impacts instead of two, and gives 1.7 seconds of warning
-instead of 2. Each level starts with nine riflemen, the starting rifle, and full
-integrity. Wave transitions heal 10 integrity but grant no soldiers or weapons.
+These are an automated policy's results, not predicted human completion times.
+Area damage and cart chains shorten some later encounters even though their
+formations are stronger. Human playtesting should guide further tuning.
 
-## Supply windows and casualties
+## Browser checks
 
-- Recruits arrive in bursts of up to six, 10 seconds apart in Level 1 and 11 in
-  Level 2. The boards travel at 2.4 / 2.9 units per second.
-- Hitting the 42-soldier cap removes all recruit boards and invalidates pending
-  shots at them. Casualties reopen recruitment within 1.5 seconds.
-- Every eight accumulated integrity damage costs one soldier, down to one
-  remaining commander. Fallen blue soldiers animate for 4.5 seconds. Integrity
-  reaching zero still ends the run.
-- Weapon goals start at z = −14 and expire at z = 20, moving at 1.65 / 2.15 units
-  per second: about 20.6 / 15.8 seconds to finish the goal.
-- Damage persists while switching lanes and between waves until the board
-  expires. Expiry invalidates pending bullets and discards partial progress.
-  A fresh attempt arrives after 4 / 5 seconds. Successful upgrades also leave
-  a 4 / 5 second gap before the next weapon goal.
-- Artillery affects enemies only. It cannot collect recruits or unlock weapons.
+`test:campaign` completes all ten sectors with tactical inputs, captures each
+world and guardian, encounters all ten weapons, and verifies saved completion.
+`test:browser` checks keyboard/mouse controls, pause, immediate Space artillery,
+all nine Next Level transitions, fresh starts, and the final campaign result.
+`test:mobile` checks eight touch viewports with safe insets, removal of persistent
+lane panels, drag targeting, two-finger artillery, rotation, and a Level 10 win.
 
-## Automated strategy checks
-
-Three seeds (731, 19, 2048) were checked using ordinary movement, auto-fire, and
-artillery inputs, reconsidered every 0.2 seconds. The policy uses visible supply
-availability and deadlines, returns to defense near approaching enemies, and
-dodges marked impacts. It targets 15 / 25 / 34 / 42 soldiers in Level 1 and
-21 / 30 / 38 / 42 in Level 2, with weapon tiers 2 / 3 / 4 / 4 in both.
-
-| Strategy | Level 1 | Level 2 |
-| --- | --- | --- |
-| Starting squad and rifle, with artillery | Overrun in wave 3, 70–78s | Overrun in wave 2, 43–51s |
-| Recruits only, with artillery | Overrun in wave 4 | Overrun in wave 2 |
-| Weapons only, with artillery | Overrun in wave 3 | Overrun in wave 2 |
-| Recruits, guns, defense, and artillery | Victory, 72–73s | Victory, 87–88s |
-| Recruits, guns, and defense, no artillery | Victory, 94–95s | Victory, 101–102s |
-
-The Level 2 policy misses one weapon opportunity with artillery and two without,
-demonstrating that a missed board is recoverable. Without artillery it also
-takes 2–4 casualties and recruits replacements. These runs establish a viable
-route and the intended tradeoffs; human timing and decisions will differ.
-
-Run `npm run test:balance` to reproduce comparisons. Simulation regression
-tests require unupgraded play to lose and blended play to win both levels with
-and without artillery across all three seeds. Browser checks complete both
-levels, deliberately inflict a casualty at the cap to check replacement visuals,
-and exercise the actual next-level, replay, and direct-selection controls.
+Physical phone GPU performance and human difficulty have not been benchmarked.

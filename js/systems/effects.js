@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js';
+import { randomSource } from '../core/math.js?v=0.4.0';
 const d=new T.Object3D(),direction=new T.Vector3(),up=new T.Vector3(0,1,0),color=new T.Color();
 function glowTexture(){
   const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
@@ -7,7 +7,7 @@ function glowTexture(){
   x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c);
 }
 export function createEffects(scene) {
-  const random=randomSource(491),particles=[],smoke=[],rings=[],scorches=[];
+  const random=randomSource(491),particles=[],smoke=[],rings=[],scorches=[],beams=[];
   const glow=glowTexture();
   const sparkMesh=new T.InstancedMesh(new T.SphereGeometry(1,5,4),new T.MeshBasicMaterial({color:0xffffff,transparent:true,blending:T.AdditiveBlending,depthWrite:false}),900);
   const smokeMesh=new T.InstancedMesh(new T.PlaneGeometry(2,2),new T.MeshBasicMaterial({map:glow,color:0xffffff,transparent:true,opacity:.55,depthWrite:false}),250);
@@ -46,6 +46,11 @@ export function createEffects(scene) {
     if(scorches.length>28){const old=scorches.shift();scene.remove(old);old.geometry.dispose();old.material.dispose();}
   }
   function handle(event) {
+    if(event.type==='beam'&&beams.length<70){
+      const geometry=new T.BufferGeometry().setFromPoints([new T.Vector3(event.x,event.y,event.z),new T.Vector3((event.x+event.tx)/2+.25,(event.y+event.ty)/2+.3,(event.z+event.tz)/2),new T.Vector3(event.tx,event.ty,event.tz)]);
+      const mesh=new T.Line(geometry,new T.LineBasicMaterial({color:event.color,transparent:true,opacity:.9,blending:T.AdditiveBlending}));scene.add(mesh);beams.push({mesh,life:.13});
+    }
+    if(event.type==='powerup'){burst(event.x,1,event.z,42,1.2,0x9eeedb);ring(event.x,event.z,5,0xa4ffdf,1);}
     if(event.type==='shot'){
       const dx=-Math.sin(event.yaw),dz=-Math.cos(event.yaw);
       for(let i=0;i<4;i++)spark(event.x,event.y,event.z,dx*(3+random()*5)+(random()-.5),random()*1.4,dz*(3+random()*5),.07+random()*.07,.06+random()*.05,event.color||0xffd779);
@@ -53,7 +58,7 @@ export function createEffects(scene) {
       shotLight.position.set(event.x,event.y+.2,event.z);shotLife=.05;
     }
     if(event.type==='hit'){burst(event.x,event.y,event.z,event.blast?2:4,.6,event.friendly?0x77dcff:0xffb74d);if(!event.friendly&&random()>.75)puff(event.x,event.y,event.z,1,.35);}
-    if(event.type==='cannon'){burst(event.x,.7,event.z,5,.9,0xff9e44);if(random()>.7)puff(event.x,.3,event.z,2,.9);}
+    if(event.type==='cannon'){burst(event.x,.7,event.z,5,.9,event.color||0xff9e44);if(random()>.7)puff(event.x,.3,event.z,2,.9);}
     if(event.type==='weapon'){burst(event.x,2,event.z,48,1.2,0xffdb7d);ring(event.x,event.z,4,0xffdc8b,1.2);}
     if(event.type==='death'){burst(event.x,.6,event.z,event.boss?70:9,event.boss?2.4:.6);puff(event.x,.3,event.z,event.boss?22:3,event.boss?3:.7);if(event.boss){ring(event.x,event.z,12,0xffc27a,1.4);blastLife=.7;blastLight.position.set(event.x,3,event.z);}}
     if(event.type==='explosion'){
@@ -92,9 +97,11 @@ export function createEffects(scene) {
   return {
     handle,
     reset(){particles.length=0;smoke.length=0;for(const r of rings){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();}rings.length=0;
+      for(const b of beams){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();}beams.length=0;
       for(const s of scorches){scene.remove(s);s.geometry.dispose();s.material.dispose();}scorches.length=0;
       for(const v of zoneVisuals.values())removeGroup(v.group);zoneVisuals.clear();shotLife=blastLife=0;},
     update(sim,dt,time,camera){
+      for(let i=beams.length-1;i>=0;i--){const b=beams[i];b.life-=dt;b.mesh.material.opacity=Math.max(0,b.life*7);if(b.life<=0){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();beams.splice(i,1);}}
       drawParticles(sparkMesh,particles,dt,11,camera);drawParticles(smokeMesh,smoke,dt,-.1,camera);
       shotLife=Math.max(0,shotLife-dt);blastLife=Math.max(0,blastLife-dt);
       shotLight.intensity=shotLife*130;blastLight.intensity=blastLife*140;
@@ -115,6 +122,7 @@ export function createEffects(scene) {
       squadRing.position.set(sim.player.x,.16,sim.player.z+.7);
       squadRing.scale.set(1+Math.max(0,sim.player.squad-12)*.011,1+Math.max(0,sim.player.squad-9)*.027,1);
       squadGlow.position.copy(squadRing.position);squadGlow.position.y=.15;
+      squadRing.material.color.setHex(sim.shield>0?0xb9b3ff:sim.buffs.overdrive>0?0xffd577:0x61d7f2);
       const zoneIds=new Set(sim.zones.map(z=>z.id));
       for(const [id,v] of zoneVisuals)if(!zoneIds.has(id)){removeGroup(v.group);zoneVisuals.delete(id);}
       for(const z of sim.zones){if(!zoneVisuals.has(z.id))zoneVisuals.set(z.id,zoneVisual(z));const v=zoneVisuals.get(z.id);

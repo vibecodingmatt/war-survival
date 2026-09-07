@@ -1,6 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
 import { HDRLoader } from '../../vendor/HDRLoader.js';
-import { randomSource } from '../core/math.js';
+import { randomSource } from '../core/math.js?v=0.4.0';
+import { WORLDS } from '../../data/campaign.js?v=0.4.0';
+import { createAmbience } from './ambience.js?v=0.4.0';
 
 const dummy = new T.Object3D();
 function instances(scene, geometry, material, entries, shadow = true) {
@@ -152,7 +154,7 @@ export async function createEnvironment(scene, renderer) {
       s: [range(20, 37), range(38, 72), range(25, 55)], r: [0, range(0, 5), range(-.2,.2)],
       c: new T.Color().setHSL(0.44, 0.1, range(0.45,0.65)) });
   }
-  instances(scene, rockGeometry, cliffMat, cliffs); instances(scene, rockGeometry, darkStone, outcrops);
+  const cliffMesh=instances(scene, rockGeometry, cliffMat, cliffs); instances(scene, rockGeometry, darkStone, outcrops);
   instances(scene, rockGeometry, new T.MeshStandardMaterial({ color: 0x819b8e, roughness: 1 }), mountains, false);
 
   // Ancient gate: deep opening, stacked lintels, fluted columns, and broken towers.
@@ -197,7 +199,7 @@ export async function createEnvironment(scene, renderer) {
       for(let j=0;j<4;j++) vines.push({p:[side*7.56,-j*.55,z],s:[range(.22,.5),.06,range(.35,.9)],r:[0,range(0,6),.4]});
     }
   }
-  instances(scene, trunkGeo, wood, trunks);
+  const palmTrunks=instances(scene, trunkGeo, wood, trunks);
   const leaves = instances(scene, frondGeometry(), new T.MeshStandardMaterial({ color: 0x93ac69, roughness: .9, side: T.DoubleSide, vertexColors:true }), fronds);
   instances(scene, new T.IcosahedronGeometry(1,0), new T.MeshStandardMaterial({color:0x435d38,roughness:1}), vines, false);
   const leavesUniform = { value: 0 };
@@ -210,9 +212,9 @@ export async function createEnvironment(scene, renderer) {
   const waterUniform = { value: 0 };
   // Extend beneath wide phone views so the river never ends against the sky.
   const water = new T.Mesh(new T.PlaneGeometry(900, 900, 1, 1), new T.ShaderMaterial({
-    uniforms: { time: waterUniform }, transparent: true, opacity: .9,
+    uniforms: { time: waterUniform, tint:{value:new T.Color('#367b78')} }, transparent: true, opacity: .9,
     vertexShader: 'varying vec2 vUv;varying vec3 vView;void main(){vUv=uv;vec4 view=modelViewMatrix*vec4(position,1.);vView=view.xyz;gl_Position=projectionMatrix*view;}',
-    fragmentShader: 'varying vec2 vUv;varying vec3 vView;uniform float time;void main(){float w=sin(vUv.x*2166.+time*.5+sin(vUv.y*240.+time)*2.)*.5+.5;float s=pow(w,18.)*.13;vec3 c=mix(vec3(.12,.28,.27),vec3(.44,.61,.53),vUv.y)+s;float mist=1.-smoothstep(170.,330.,length(vView));gl_FragColor=vec4(c,.94*mist);}',
+    fragmentShader: 'varying vec2 vUv;varying vec3 vView;uniform float time;uniform vec3 tint;void main(){float w=sin(vUv.x*2166.+time*.5+sin(vUv.y*240.+time)*2.)*.5+.5;float s=pow(w,18.)*.13;vec3 c=tint*(.7+vUv.y*.5)+s;float mist=1.-smoothstep(170.,330.,length(vView));gl_FragColor=vec4(c,.94*mist);}',
   })); water.rotation.x=-Math.PI/2; water.position.set(0,-29,-65); scene.add(water);
   const fallsMat = new T.ShaderMaterial({
     transparent:true,side:T.DoubleSide,depthWrite:false,uniforms:{time:waterUniform},
@@ -245,26 +247,38 @@ export async function createEnvironment(scene, renderer) {
   const birdGeo=new T.BufferGeometry();birdGeo.setAttribute('position',new T.Float32BufferAttribute([-1,0,0,0,-.2,0,1,0,0],3));
   const birds=[];
   for(let i=0;i<7;i++){const bird=new T.Line(birdGeo,new T.LineBasicMaterial({color:0x465e5a}));bird.position.set(range(-45,45),range(18,28),range(-140,-90));bird.scale.setScalar(range(.7,1.3));scene.add(bird);birds.push(bird);}
-  let emberGate=false;
+  let emberGate=false,currentWorld=WORLDS[0],baseSun=3.7;
+  const ambience=createAmbience(scene,{color:cliffColor,normal:cliffNormal});
   const moteOrigins=motePositions.slice();
   return {
     sun,
     setLevel(index){
-      emberGate=index===1;
-      scene.fog.color.setHex(emberGate?0x837983:0xb9c6b6);scene.fog.density=emberGate?.008:.006;
-      sky.material.uniforms.zenith.value.set(emberGate?'#384b6b':'#608e9c');
-      sky.material.uniforms.horizon.value.set(emberGate?'#e8a878':'#f5ddb1');
-      sun.color.setHex(emberGate?0xffa05b:0xffd6a0);sun.intensity=emberGate?2.8:3.7;
-      sun.position.set(emberGate?-40:-32,emberGate?27:47,-26);
-      rim.color.setHex(emberGate?0x9ebeea:0x86b7c9);rim.intensity=emberGate?1.5:1;
-      scene.environmentIntensity=emberGate?.55:.7;
-      motes.material.color.setHex(emberGate?0xffa351:0xffe8ad);
+      currentWorld=WORLDS[index];emberGate=currentWorld.weather==='embers';
+      const night=['ice','storm','luminous','volcano'].includes(currentWorld.biome);
+      scene.fog.color.set(currentWorld.fog);scene.fog.density=currentWorld.biome==='storm'?.008:.006;
+      sky.material.uniforms.zenith.value.set(currentWorld.sky);sky.material.uniforms.horizon.value.set(currentWorld.horizon);
+      sun.color.set(currentWorld.sun);baseSun=night?2.3:emberGate?2.8:3.7;sun.intensity=baseSun;
+      sun.position.set(-32-index*1.5,night?29:47,-26);
+      rim.color.set(currentWorld.accent);rim.intensity=night?1.6:1;
+      scene.environmentIntensity=night?.62:.7;
+      water.material.uniforms.tint.value.set(currentWorld.water);
+      motes.material.color.set(currentWorld.accent);
       motes.material.size=emberGate?.095:.055;motes.material.opacity=emberGate?.8:.55;
-      for(const bird of birds)bird.visible=!emberGate;
-      paving.material.color.setHex(emberGate?0xb5a59b:0xc0bca8);
+      for(const bird of birds)bird.visible=!night&&!emberGate;
+      paving.material.color.set(currentWorld.stone);stone.color.set(currentWorld.stone);goldenStone.color.set(currentWorld.stone);cliffMat.color.set(currentWorld.stone);
+      for(let i=0;i<cliffs.length;i++)cliffMesh.setColorAt(i,new T.Color(currentWorld.stone).multiplyScalar(.68+(i%5)*.035));cliffMesh.instanceColor.needsUpdate=true;
+      leaves.material.color.set(currentWorld.leaf);
+      leaves.visible=palmTrunks.visible=!['ice','autumn','luminous','volcano','celestial'].includes(currentWorld.biome);
+      for(const banner of banners)banner.material.color.set(currentWorld.accent);
+      flameMaterial.color.set(currentWorld.accent);
+      ambience.setLevel(index);
     },
-    update(time) {
-      waterUniform.value=time;leavesUniform.value=time;
+    snapshot:()=>ambience.snapshot(),
+    update(time,reduced=false) {
+      waterUniform.value=time;leavesUniform.value=reduced?time*.2:time;
+      ambience.update(time,reduced);
+      const lightning=!reduced&&currentWorld.weather==='storm'&&time%17>16.7?Math.pow(Math.sin((time%17-16.7)*34),6)*1.7:0;
+      sun.intensity=baseSun+lightning;
       for(let i=0;i<flames.length;i++){const f=flames[i];f.scale.y=2+Math.sin(time*9+i*4)*.3;f.scale.x=1.3+Math.sin(time*13+i)*.13;}
       for(const banner of banners){const p=banner.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);p.setZ(i,Math.sin(time*2+y*2+banner.position.x)*.16*(2.7-y)/5.4);}p.needsUpdate=true;banner.geometry.computeVertexNormals();}
       motes.rotation.y=Math.sin(time*.035)*.06;

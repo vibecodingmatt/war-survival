@@ -1,6 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
-import { formation } from '../core/math.js';
-import { MAX_SQUAD } from '../../data/waves.js';
+import { formation } from '../core/math.js?v=0.4.0';
+import { MAX_SQUAD } from '../../data/waves.js?v=0.4.0';
+import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.4.0';
+import { createBosses } from './bosses.js?v=0.4.0';
 
 const root = new T.Object3D(), limb = new T.Object3D(), partTransform = new T.Object3D();
 const world = new T.Matrix4(), joint = new T.Matrix4(), tint = new T.Color();
@@ -79,12 +81,27 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
       part(cylinder(.24,.24,.1),gold,[.23,1.4,-1.75],[Math.PI/2,0,0]);
       for(let n=0;n<6;n++)part(cylinder(.045,.045,1.15,7),steel,[Math.cos(n*Math.PI/3)*.155,Math.sin(n*Math.PI/3)*.155,-.16],[Math.PI/2,0,0],'rotor');
       part(new T.BoxGeometry(.23,.26,.32),gold,[.55,1.37,-.5]);
-    } else {
+    } else if(weaponLevel===4) {
       part(cylinder(.17,.25,1.5,12),darkSteel,[.23,1.4,-.96],[Math.PI/2,0,0]);
       part(cylinder(.235,.235,.15,12),gold,[.23,1.4,-1.66],[Math.PI/2,0,0]);
       part(cylinder(.18,.18,.17,12),leather,[.23,1.4,-1.75],[Math.PI/2,0,0]);
       for(let n=0;n<3;n++)part(cylinder(.26,.26,.07,12),gold,[.23,1.4,-.52-n*.26],[Math.PI/2,0,0]);
       part(new T.BoxGeometry(.2,.25,.23),cloth,[.23,1.12,-.65]);
+    }else{
+      const weapon=Object.values(WEAPON_LIBRARY).find(w=>w.model===weaponLevel);
+      const energy=new T.MeshStandardMaterial({color:weapon.color,emissive:weapon.color,emissiveIntensity:.9,metalness:.4,roughness:.3});
+      part(new T.BoxGeometry(.34,.34,.8),darkSteel,[.23,1.36,-.5]);
+      const dual=weaponLevel===9||weaponLevel===8;
+      for(const side of dual?[-1,1]:[0]){
+        part(cylinder(.1,.14,1.1),steel,[.23+side*.19,1.4,-1.15],[Math.PI/2,0,0]);
+        part(cylinder(.13,.13,.14),energy,[.23+side*.19,1.4,-1.69],[Math.PI/2,0,0]);
+      }
+      if(weaponLevel===6||weaponLevel===5||weaponLevel===10){
+        for(let i=0;i<4;i++)part(new T.TorusGeometry(.2,.035,5,12),energy,[.23,1.4,-.8-i*.2]);
+        part(sphere(.13,.28,.13),energy,[.23,1.65,-.55]);
+      }else if(weaponLevel===7){
+        part(cylinder(.18,.18,.5),energy,[-.35,1.23,.35]);part(cylinder(.18,.18,.5),gold,[.05,1.23,.35]);
+      }else part(new T.BoxGeometry(.44,.08,.25),energy,[.23,1.58,-.5]);
     }
   }else{
     part(new T.BoxGeometry(.28,.31,.14),leather,[-.27,.97,.1]);
@@ -158,21 +175,24 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
 }
 
 export function createArmies(scene) {
-  const squads=[1,2,3,4].map(level=>createArmy(scene,MAX_SQUAD*2,true,false,level));
-  const legion=createArmy(scene,360,false),heavies=createArmy(scene,40,false,true);
+  const squads=new Map(),bosses=createBosses(scene);
+  const legion=createArmy(scene,460,false),heavies=createArmy(scene,64,false,true);
   const blueUnits=Array.from({length:MAX_SQUAD},()=>({x:0,z:0,scale:1.08,phase:0}));
   return {
     update(sim,time) {
       const p=sim.player;
       for(let i=0;i<p.squad;i++){const f=formation(i,p.squad),u=blueUnits[i];u.x=p.x+f.x;u.z=p.z+f.z;u.phase=time*10+i*.8;}
-      for(let level=0;level<4;level++){
-        const units=level===p.weaponLevel-1?blueUnits.slice(0,p.squad):[];
-        units.push(...sim.fallen.filter(soldier=>soldier.weaponLevel===level+1));
-        squads[level].update(units,time,Math.hypot(p.vx,p.vz),sim.recoil,sim.aim);
+      const weapon=sim.weapon;
+      if(!squads.has(weapon.id))squads.set(weapon.id,createArmy(scene,MAX_SQUAD*2,true,false,weapon.model));
+      for(const [id,squad] of squads){
+        const units=id===weapon.id?blueUnits.slice(0,p.squad):[];
+        units.push(...sim.fallen.filter(soldier=>(soldier.weaponId||'rifle')===id));
+        squad.update(units,time,Math.hypot(p.vx,p.vz),sim.recoil,sim.aim);
       }
       const regular=[],heavy=[];
-      for(const e of [...sim.enemies,...sim.corpses]) (e.type==='boss'||e.type==='brute'?heavy:regular).push(e);
+      for(const e of [...sim.enemies,...sim.corpses])if(e.type!=='boss'&&e.type!=='cart') (e.type==='brute'?heavy:regular).push(e);
       legion.update(regular,time);heavies.update(heavy,time);
+      bosses.update(sim,time);
     },
   };
 }

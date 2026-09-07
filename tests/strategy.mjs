@@ -1,13 +1,14 @@
 // Ordinary player decisions: choose a lane, move out of impact zones, use artillery.
 // No direct damage, free upgrades, health changes, or hidden difficulty adjustments.
 export function strategy(s, mode = 'balanced') {
-  const soldierGoal = (s.level===2?[21,30,38,42]:[15,25,34,42])[s.wave - 1];
-  const weaponGoal = [2, 3, 4, 4][s.wave - 1];
+  const soldierGoal = (s.level>=2?[21,30,38,42]:[15,25,34,42])[s.wave - 1];
+  // Later sectors offer the second upgrade during wave one; waiting wastes its window.
+  const weaponGoal = [s.level>=3?3:2, 3, 4, 4][s.wave - 1];
   let lane = 'enemies';
   if (s.nearestEnemy < s.z - 9) {
     if (mode !== 'weapons' && mode !== 'none' && s.squad < soldierGoal && s.recruits > 0) lane = 'recruits';
     else if (mode !== 'recruits' && mode !== 'none' && s.weaponLevel < weaponGoal && s.armory) lane = 'weapons';
-    const damagePerSecond=s.squad*[9/.64,12/.44,16/.29,35/.45][s.weaponLevel-1];
+    const damagePerSecond=s.squad*s.weaponDps;
     if(mode!=='recruits'&&mode!=='none'&&s.weaponLevel<weaponGoal&&s.armory&&s.armory.remaining<s.armory.hp/damagePerSecond+4)lane='weapons';
   }
   const x = lane === 'recruits' ? -3.8 : lane === 'weapons' ? 3.8 : 0;

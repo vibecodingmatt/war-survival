@@ -1,6 +1,8 @@
 import { Simulation } from '../js/core/simulation.js';
 import { strategy } from './strategy.mjs';
-for (const level of [0,1]) for (const mode of ['none', 'recruits', 'weapons', 'balanced', 'balanced-no-art']) {
+import { LEVELS } from '../data/waves.js';
+import assert from 'node:assert/strict';
+for (const level of LEVELS.map((_,i)=>i)) for (const mode of ['none', 'recruits', 'weapons', 'balanced']) {
   for (const seed of [731, 19, 2048]) {
     const sim = new Simulation(seed); sim.start(level); const progression = [];
     let previousWave = 0, input = {}, steps = 0;
@@ -11,5 +13,6 @@ for (const level of [0,1]) for (const mode of ['none', 'recruits', 'weapons', 'b
     }
     const s=sim.snapshot();
     console.log(JSON.stringify({level:level+1,mode,seed,result:s.state,wave:s.wave,time:Math.round(s.time),health:s.health,squad:s.squad,gun:s.weaponLevel,kills:s.kills,breaches:s.breaches,casualties:s.casualties,missed:s.missedWeapons,progression}));
+    assert.equal(s.state,mode==='balanced'?'victory':'defeat','level '+(level+1)+' '+mode+' seed '+seed);
   }
 }

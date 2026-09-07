@@ -1,9 +1,12 @@
-import { LEVELS, WEAPONS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js';
-import { clamp, randomSource, formation } from './math.js';
+import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.4.0';
+import { clamp, randomSource, formation } from './math.js?v=0.4.0';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.4.0';
 
 export class Simulation {
   constructor(seed = 731) { this.seed = seed; this.reset(); this.preview(); }
   get levelData() { return LEVELS[this.level]; }
+  get weapons() { return this.levelData.weapons; }
+  get weapon() { return this.weapons[this.player.weaponLevel-1]; }
   reset(level = 0) {
     this.level = clamp(Math.floor(Number(level) || 0), 0, LEVELS.length - 1);
     this.random = randomSource(this.seed);
@@ -18,6 +21,8 @@ export class Simulation {
     this.recruitHitCooldown = 0; this.focus = 'enemies'; this.steerX = null;
     this.recruited = 0; this.breaches = 0; this.shots = { recruits: 0, enemies: 0, weapons: 0 };
     this.weaponTimer = 0; this.missedWeapons = 0; this.casualties = 0; this.casualtyDamage = 0;
+    this.pods=[];this.podTimer=12;this.podsOpened=0;this.cartsDestroyed=0;
+    this.buffs={overdrive:0,rally:0};this.shield=0;
   }
   preview() {
     for (let i = 0; i < 96; i++) this.spawnEnemy(i, { hp: 80, speed: 2 }, i === 88 ? 'boss' : 'soldier');
@@ -38,7 +43,7 @@ export class Simulation {
     this.recruits.push({ id: this.nextId++, type: 'recruit', x: -5.55, y: 1, z, hp: 1, maxHp: 1, reserved: 0, scale: 1, hit: 0 });
   }
   createArmory() {
-    const next = WEAPONS[this.player.weaponLevel];
+    const next = this.weapons[this.player.weaponLevel];
     this.armory = next ? { id: this.nextId++, type: 'weapon', x: 5.55, y: 2.5, z: -14,
       hp: next.cost, maxHp: next.cost, reserved: 0, scale: 1.6, hit: 0, level: this.player.weaponLevel + 1 } : null;
   }
@@ -48,19 +53,20 @@ export class Simulation {
     this.enemies = []; this.zones = []; this.state = 'active'; this.bossTimer = 5;
     const wave = this.levelData.waves[index];
     for (let i = 0; i < wave.count; i++) {
-      const type = i >= wave.count - wave.grenadiers ? 'grenadier' : i < wave.brutes ? 'brute' : 'soldier';
+      const type = i >= wave.count - wave.grenadiers ? 'grenadier' : i < wave.brutes ? 'brute' : this.level>=2&&i%47===24?'cart':'soldier';
       this.spawnEnemy(i, wave, type);
     }
     if (wave.boss) this.spawnEnemy(wave.count, wave, 'boss');
     this.events.push({ type: 'wave', index, name: wave.name, description: wave.description });
   }
   spawnEnemy(index, wave, type = 'soldier') {
-    const boss = type === 'boss', brute = type === 'brute', hp = boss ? this.levelData.bossHp : wave.hp * (brute ? 2.3 : 1);
+    const boss = type === 'boss', brute = type === 'brute', hp = boss ? this.levelData.bossHp*(wave.mini?.32:1) : wave.hp * (brute ? 2.3 : type==='cart'?.6:1);
     this.enemies.push({
       id: this.nextId++, type, x: boss ? 0 : (index % 9 - 4) * .94 + (this.random() - .5) * .14,
-      z: boss ? -55 : -26 - Math.floor(index / 9) * 1.62,
+      z: boss ? -38 : -26 - Math.floor(index / 9) * 1.62,
       y: 0, hp, maxHp: hp, reserved: 0, speed: wave.speed * (boss ? .55 : brute ? .91 : .96 + this.random() * .08),
-      scale: boss ? 3.7 : brute ? 1.25 : .84 + this.random() * .09,
+      scale: boss ? (wave.mini?2.6:3.7) : brute ? 1.25 : .84 + this.random() * .09,
+      bossType:wave.bossType||this.levelData.world.boss,mini:!!wave.mini,slow:0,burn:0,burnDamage:0,
       phase: this.random() * Math.PI * 2, yaw: Math.PI, attackTimer: this.random() * 3 + 5,
       hit: 0, vx: 0, vz: 0, knockback: 0,
     });
@@ -94,9 +100,9 @@ export class Simulation {
     }
     if (this.focus === 'weapons') return this.armory?.hp > this.armory?.reserved ? this.armory : null;
     let selected = null, best = Infinity;
-    for (const enemy of this.enemies) {
+    for (const collection of [this.pods,this.enemies]) for (const enemy of collection) {
       if (enemy.hp <= 0 || enemy.z > z + 3 || z - enemy.z > 57) continue;
-      const score = Math.hypot(enemy.x - x, enemy.z - z) + Math.abs(enemy.x - x) * .6 + (enemy.reserved >= enemy.hp ? 1000 : 0);
+      const score = Math.hypot(enemy.x - x, enemy.z - z) + Math.abs(enemy.x - x) * .6 + (enemy.reserved >= enemy.hp ? 1000 : 0) - (enemy.type==='pod'?12:0);
       if (score < best) { best = score; selected = enemy; }
     }
     return selected;
@@ -108,6 +114,7 @@ export class Simulation {
     this.hurtCooldown = Math.max(0, this.hurtCooldown - dt);
     this.recruitHitCooldown = Math.max(0, this.recruitHitCooldown - dt);
     const p = this.player;
+    for(const key of Object.keys(this.buffs))this.buffs[key]=Math.max(0,this.buffs[key]-dt);
     let ix = input.x || 0, iz = input.z || 0;
     if (ix) this.steerX = null;
     if (this.steerX !== null) ix = clamp((this.steerX - p.x) * 3, -1, 1);
@@ -118,7 +125,7 @@ export class Simulation {
     if (input.barrage) this.barrage();
 
     this.updateSupplies(dt);
-    const weapon = WEAPONS[p.weaponLevel - 1];
+    const weapon = this.weapon;
     for (let i = 0; i < p.squad; i++) {
       this.shootTimers[i] -= dt; this.recoil[i] = Math.max(0, this.recoil[i] - dt * 6);
       const f = formation(i, p.squad), sx = p.x + f.x, sz = p.z + f.z, target = this.target(sx, sz);
@@ -127,11 +134,11 @@ export class Simulation {
         if (this.shootTimers[i] <= 0 && this.bullets.length < 360) {
           const x = sx - Math.sin(this.aim[i]) * 1.35, z = sz - Math.cos(this.aim[i]) * 1.35;
           this.bullets.push({ id: this.nextId++, x, y: 1.56, z, target, damage: weapon.damage, life: 0, speed: weapon.speed,
-            tx: target.x, ty: target.y || target.scale * 1.15, tz: target.z, weaponLevel: p.weaponLevel, splash: weapon.splash, color: weapon.color });
+            tx: target.x, ty: target.y || target.scale * 1.15, tz: target.z, weaponLevel: p.weaponLevel, weaponId:weapon.id, splash: weapon.splash, color: weapon.color });
           target.reserved += weapon.damage; this.shots[this.focus]++;
           if (target.type === 'recruit') this.recruitHitCooldown = .38;
-          this.events.push({ type: 'shot', x, y: 1.56, z, yaw: this.aim[i], weaponLevel: p.weaponLevel, color: weapon.color });
-          this.shootTimers[i] = weapon.interval * (.94 + this.random() * .12); this.recoil[i] = 1;
+          this.events.push({ type: 'shot', x, y: 1.56, z, yaw: this.aim[i], weaponLevel: p.weaponLevel, weaponId:weapon.id, color: weapon.color });
+          this.shootTimers[i] = weapon.interval * (.94 + this.random() * .12)*(this.buffs.overdrive>0?.62:1); this.recoil[i] = 1;
         }
       } else this.aim[i] *= 1 - dt * 3;
     }
@@ -139,8 +146,11 @@ export class Simulation {
     for (const enemy of this.enemies) {
       if (enemy.hp <= 0) continue;
       enemy.hit = Math.max(0, enemy.hit - dt * 4); enemy.attackTimer -= dt;
+      if(enemy.burn>0){enemy.burn-=dt;this.damage(enemy,enemy.burnDamage*dt,false,true);}
+      if(enemy.hp<=0)continue;
+      enemy.slow=Math.max(0,enemy.slow-dt);
       const dx = p.x - enemy.x, dz = p.z - enemy.z, near = dz < 9;
-      const speed = enemy.speed * (enemy.knockback > 0 ? -.5 : 1);
+      const speed = enemy.speed * (enemy.knockback > 0 ? -.5 : 1)*(enemy.slow>0?.52:1);
       enemy.knockback = Math.max(0, enemy.knockback - dt);
       enemy.vx = clamp(dx * (near ? .48 : .009), -1.5, 1.5); enemy.vz = speed;
       if (enemy.type === 'boss' && enemy.z > -9) enemy.vz = 0;
@@ -148,13 +158,7 @@ export class Simulation {
       enemy.yaw = Math.PI + Math.atan2(enemy.vx, Math.max(.5, Math.abs(enemy.vz)));
       enemy.phase += dt * Math.abs(speed) * 3.2;
       if (enemy.type === 'boss') {
-        this.bossTimer -= dt;
-        if (this.bossTimer <= 0) {
-          this.bossTimer = enemy.hp < enemy.maxHp * .45 ? 4 : 5.5;
-          for (let n = 0; n < this.levelData.impactCount; n++) this.zones.push({ id: this.nextId++, x: clamp(p.x + (n - (this.levelData.impactCount - 1) / 2) * 2.2, -5.4, 5.4),
-            z: p.z + n * .6, radius: 2, remaining: this.levelData.impactFuse + n * .2, total: this.levelData.impactFuse + n * .2, friendly: false, damage: this.levelData.impactDamage });
-          this.events.push({ type: 'warning', text: 'INCOMING IMPACT — MOVE OUT OF THE RED ZONES' });
-        }
+        if(enemy.attackTimer<=0){enemy.attackTimer=this.waveTime>65?3.2:enemy.hp<enemy.maxHp*.45?4.2:6;this.bossAttack(enemy);}
       } else if (enemy.type === 'grenadier' && dz < 37 && enemy.attackTimer <= 0) {
         enemy.attackTimer = 10 + this.random() * 3;
         this.zones.push({ id: this.nextId++, x: p.x, z: p.z, radius: 1.8, remaining: 2, total: 2, friendly: false, damage: 9 });
@@ -174,9 +178,11 @@ export class Simulation {
         bullet.done = true; bullet.target.reserved = Math.max(0, bullet.target.reserved - bullet.damage);
         if (bullet.target.hp > 0) {
           this.damage(bullet.target, bullet.damage, false);
-          if (bullet.splash && !['recruit', 'weapon'].includes(bullet.target.type)) {
+          const special=this.weapons.find(w=>w.id===bullet.weaponId)||weapon;
+          if(!['recruit','weapon','pod'].includes(bullet.target.type))this.weaponImpact(bullet,special);
+          if (bullet.splash && !['recruit', 'weapon','pod'].includes(bullet.target.type)) {
             for (const other of this.enemies) if (other !== bullet.target && other.hp > 0 && Math.hypot(other.x - bullet.tx, other.z - bullet.tz) < bullet.splash) this.damage(other, bullet.damage * .55, true);
-            this.events.push({ type: 'cannon', x: bullet.tx, y: .6, z: bullet.tz });
+            this.events.push({ type: 'cannon', x: bullet.tx, y: .6, z: bullet.tz, color:bullet.color });
           }
         }
       } else { bullet.x += dx / distance * travel; bullet.y += dy / distance * travel; bullet.z += dz / distance * travel; }
@@ -218,6 +224,16 @@ export class Simulation {
     this.recruits = [];
   }
   updateSupplies(dt) {
+    if(this.level>=2){
+      this.podTimer-=dt;
+      if(this.podTimer<=0&&this.pods.length<2){
+        const kind=['overdrive','shield','rally','repair'][(this.podsOpened+this.wave)%4];
+        this.pods.push({id:this.nextId++,type:'pod',kind,x:this.random()>.5?1.5:-1.5,y:1.4,z:-20,hp:180+this.wave*80,maxHp:180+this.wave*80,reserved:0,scale:1,hit:0});this.podTimer=22;
+        this.events.push({type:'supply',text:'SUPPLY POD INBOUND · '+kind.toUpperCase()});
+      }
+      for(const pod of this.pods){pod.z+=dt*2.6;pod.hit=Math.max(0,pod.hit-dt*5);if(pod.z>=SUPPLY_EXIT)pod.hp=0;}
+      this.pods=this.pods.filter(p=>p.hp>0);
+    }
     if (this.player.squad >= MAX_SQUAD) this.clearRecruits();
     else {
       this.recruitTimer = Math.max(0, this.recruitTimer - dt);
@@ -237,30 +253,80 @@ export class Simulation {
         this.weaponTimer = this.levelData.weaponInterval;
         this.events.push({ type: 'supplyMissed', text: 'WEAPON PASSED — ANOTHER CHANCE IS ON THE WAY' });
       }
-    } else if (this.player.weaponLevel < WEAPONS.length) {
+    } else if (this.player.weaponLevel < this.weapons.length) {
       this.weaponTimer = Math.max(0, this.weaponTimer - dt);
       if (this.weaponTimer <= 0) this.createArmory();
     }
   }
-  damage(target, amount, blast) {
+  damage(target, amount, blast, quiet=false) {
     if (target.hp <= 0) return;
     target.hp -= amount; target.hit = 1; target.blast = blast;
-    this.events.push({ type: 'hit', x: target.x, y: target.y || target.scale * 1.2, z: target.z, blast, scale: target.scale, friendly: ['recruit', 'weapon'].includes(target.type) });
+    if(!quiet)this.events.push({ type: 'hit', x: target.x, y: target.y || target.scale * 1.2, z: target.z, blast, scale: target.scale, friendly: ['recruit', 'weapon','pod'].includes(target.type) });
     if (target.type === 'recruit') {
       if (target.hp <= 0 && this.player.squad < MAX_SQUAD) {
-        this.player.squad++; this.recruited++;
-        this.events.push({ type: 'recruit', x: target.x, z: target.z, amount: 1 });
+        const amount=Math.min(this.buffs.rally>0?2:1,MAX_SQUAD-this.player.squad);
+        this.player.squad+=amount; this.recruited+=amount;
+        this.events.push({ type: 'recruit', x: target.x, z: target.z, amount });
         if (this.player.squad === MAX_SQUAD) this.clearRecruits();
       }
     } else if (target.type === 'weapon') {
       if (target.hp <= 0 && target === this.armory) {
-        this.player.weaponLevel++; this.events.push({ type: 'weapon', level: this.player.weaponLevel, name: WEAPONS[this.player.weaponLevel - 1].name, x: target.x, z: target.z });
+        this.player.weaponLevel++; this.events.push({ type: 'weapon', level: this.player.weaponLevel, name: this.weapon.name, x: target.x, z: target.z });
         this.armory = null; this.weaponTimer = this.levelData.weaponInterval;
       }
+    } else if(target.type==='pod'&&target.hp<=0){
+      this.podsOpened++;
+      if(target.kind==='shield')this.shield=Math.min(50,this.shield+30);
+      else if(target.kind==='repair')this.player.health=Math.min(100,this.player.health+20);
+      else this.buffs[target.kind]=target.kind==='rally'?12:9;
+      this.events.push({type:'powerup',kind:target.kind,x:target.x,z:target.z,text:{shield:'AEGIS · 30 SHIELD',repair:'FIELD REPAIR · +20 INTEGRITY',overdrive:'OVERDRIVE · RAPID FIRE FOR 9s',rally:'RALLY · DOUBLE RECRUITS FOR 12s'}[target.kind]});
+    } else if(target.type==='cart'&&target.hp<=0&&!target.detonated){
+      target.detonated=true;this.cartsDestroyed++;
+      this.events.push({type:'explosion',x:target.x,z:target.z,radius:4.5,friendly:true});
+      for(const e of this.enemies)if(e!==target&&e.hp>0&&Math.hypot(e.x-target.x,e.z-target.z)<4.5)this.damage(e,target.maxHp*3.5,true);
     } else if (blast && target.type !== 'boss') target.knockback = .35;
+  }
+  weaponImpact(bullet,weapon){
+    const target=bullet.target;
+    if(weapon.slow)target.slow=2.4;
+    if(weapon.burn){target.burn=2.5;target.burnDamage=weapon.burn;}
+    if(weapon.chain||weapon.pierce){
+      let count=0;
+      for(const other of this.enemies){
+        if(other===target||other.hp<=0)continue;
+        const hit=weapon.chain?Math.hypot(other.x-target.x,other.z-target.z)<4.4:Math.abs(other.x-target.x)<.85&&other.z<target.z&&other.z>target.z-12;
+        if(!hit)continue;
+        this.damage(other,weapon.damage*.65,false);
+        this.events.push({type:'beam',x:target.x,y:target.scale,z:target.z,tx:other.x,ty:other.scale,tz:other.z,color:weapon.color});
+        if(++count>=(weapon.chain||weapon.pierce))break;
+      }
+    }
+  }
+  bossAttack(enemy){
+    const pattern=BOSS_TYPES[enemy.bossType].attack,p=this.player,fuse=this.levelData.impactFuse;
+    let enragedNow=false;
+    if(this.waveTime>65&&this.enemies.length<320){
+      for(let i=0;i<6;i++){
+        this.spawnEnemy(i,{hp:this.levelData.waves[this.wave].hp*1.1,speed:3.6},'brute');
+        const guard=this.enemies.at(-1);guard.x=-3.5+i*1.4;guard.z=enemy.z-4-i*.4;
+      }
+      if(!enemy.enraged){enemy.enraged=true;enragedNow=true;}
+    }
+    const zone=(x,z,radius,delay=0)=>this.zones.push({id:this.nextId++,x:clamp(x,-5.4,5.4),z,radius,remaining:fuse+delay,total:fuse+delay,friendly:false,damage:this.levelData.impactDamage});
+    if(pattern==='sweep')for(let i=0;i<3;i++)zone(-3.8+i*3.8,p.z,2.1,i*.55);
+    else if(pattern==='cross'){zone(p.x,p.z,2);zone(-p.x,p.z-4,1.8,.3);zone(p.x,p.z+4,1.8,.6);}
+    else {
+      for(let i=0;i<this.levelData.impactCount;i++)zone(p.x+(i-(this.levelData.impactCount-1)/2)*2.2,p.z+i*.6,2,i*.2);
+      if(pattern==='summon'&&this.enemies.length<330){
+        for(let i=0;i<5;i++){this.spawnEnemy(i,{hp:this.levelData.waves[this.wave].hp*.7,speed:3},'soldier');const e=this.enemies.at(-1);e.x=-3.2+i*1.6;e.z=enemy.z-4;}
+      }
+    }
+    this.events.push({type:'warning',text:enragedNow?'GUARDIAN ENRAGED · ELITE REINFORCEMENTS':pattern==='sweep'?'SWEEPING STRIKE · KEEP MOVING':pattern==='summon'?'REINFORCEMENTS · WATCH THE IMPACT ZONES':'INCOMING IMPACT · MOVE OUT OF THE RED ZONES'});
   }
   hurt(amount, breach = false) {
     if (this.state !== 'active' || (!breach && this.hurtCooldown > 0)) return;
+    const absorbed=Math.min(amount,this.shield);this.shield-=absorbed;amount-=absorbed;
+    if(amount<=0){this.hurtCooldown=.22;return;}
     this.player.health = Math.max(0, this.player.health - amount);
     this.casualtyDamage += amount;
     const losses = Math.min(this.player.squad - 1, Math.floor(this.casualtyDamage / 8));
@@ -270,7 +336,7 @@ export class Simulation {
       for (let i = 0; i < losses; i++) {
         const f = formation(p.squad - 1 - i, p.squad);
         this.fallen.push({ x: p.x + f.x, z: p.z + f.z, scale: 1.08, age: 0, yaw: 0,
-          spin: (this.random() - .5) * 3, lift: 1.6, weaponLevel: p.weaponLevel });
+          spin: (this.random() - .5) * 3, lift: 1.6, weaponLevel: p.weaponLevel,weaponId:this.weapon.id });
       }
       p.squad -= losses; this.casualties += losses;
       this.recruitTimer = Math.min(this.recruitTimer, 1.5);
@@ -283,14 +349,15 @@ export class Simulation {
   drainEvents() { const events = this.events; this.events = []; return events; }
   snapshot() {
     return { state: this.state, level: this.level + 1, levelName: this.levelData.name, wave: this.wave + 1, time: this.time, kills: this.kills, health: this.player.health,
-      squad: this.player.squad, weaponLevel: this.player.weaponLevel, weaponName: WEAPONS[this.player.weaponLevel - 1].name,
+      squad: this.player.squad, weaponLevel: this.player.weaponLevel, weaponName: this.weapon.name,weaponId:this.weapon.id,weaponDps:this.weapon.damage/this.weapon.interval,
+      shield:this.shield,buffs:{...this.buffs},podsOpened:this.podsOpened,cartsDestroyed:this.cartsDestroyed,
       focus: this.focus, recruited: this.recruited, breaches: this.breaches, shots: { ...this.shots },
       casualties: this.casualties, fallen: this.fallen.length, missedWeapons: this.missedWeapons,
       nextRecruits: this.recruitTimer, nextWeapon: this.weaponTimer,
       x: this.player.x, z: this.player.z, enemies: this.enemies.length,
       nearestEnemy: this.enemies.length ? Math.max(...this.enemies.map(e => e.z)) : -100,
       bullets: this.bullets.length, corpses: this.corpses.length, cooldown: this.barrageCooldown,
-      armory: this.armory ? { hp: this.armory.hp, maxHp: this.armory.maxHp, z: this.armory.z, remaining: (SUPPLY_EXIT - this.armory.z) / this.levelData.weaponSpeed, level: this.armory.level, name: WEAPONS[this.armory.level - 1].name } : null,
+      armory: this.armory ? { hp: this.armory.hp, maxHp: this.armory.maxHp, z: this.armory.z, remaining: (SUPPLY_EXIT - this.armory.z) / this.levelData.weaponSpeed, level: this.armory.level, name: this.weapons[this.armory.level - 1].name } : null,
       recruits: this.recruits.filter(t => t.hp > 0).length,
       zones: this.zones.map(z => ({ x: z.x, z: z.z, radius: z.radius, friendly: z.friendly, remaining: z.remaining })),
       bossHealth: this.enemies.find(e => e.type === 'boss')?.hp || 0 };

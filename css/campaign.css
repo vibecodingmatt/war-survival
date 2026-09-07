@@ -1,0 +1,54 @@
+/* Targets carry their own labels. The battle HUD contains squad health and artillery. */
+.campaign-heading { display:flex;justify-content:space-between;gap:10px;margin:0 0 10px;font-size:9px;letter-spacing:1.3px;color:#f1d7aa; }
+.campaign-heading small { color:#c5d9d1;font-size:9px;letter-spacing:.5px; }
+.menu-content { top:105px;bottom:48px;transform:none;overflow:auto;width:min(550px,47%);max-width:none; }
+.menu h1 { font-size:62px; }
+.menu .gold-rule { margin:18px 0; }
+.menu-description { font-size:13px;margin-bottom:20px; }
+.level-select { display:grid;grid-template-columns:1fr 1fr;gap:7px;max-height:230px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b3bdb27d #12252a;touch-action:pan-y;padding:2px 5px 2px 2px; }
+.level-select button { min-height:65px;padding:10px;border-left:3px solid var(--sector-color); }
+.level-select button > span { font-size:24px; }
+.level-select strong { font-size:9px;letter-spacing:.2px; }
+.level-select small { font-size:7px;letter-spacing:.2px; }
+.level-select button[aria-pressed="true"] { background:#43554bf0;border-color:var(--sector-color); }
+.level-description { min-height:42px;line-height:1.6;margin:10px 0 13px; }
+.buff-status { display:block;color:#b5f3e7;font-size:9px;line-height:1.5;margin-top:7px; }
+.bottom-hud { bottom:18px; }
+.touch-layout .bottom-hud { bottom:calc(10px + var(--safe-bottom)); }
+.touch-layout .callout { bottom:calc(130px + var(--safe-bottom)); }
+.touch-layout .boss-hud { top:calc(123px + var(--safe-top)); }
+.touch-layout .battle-banner { top:calc(220px + var(--safe-top)); }
+@media (max-width:600px), (orientation:portrait) and (max-width:1100px) {
+  .menu-content,.touch-layout .menu-content { top:calc(91px + env(safe-area-inset-top));bottom:calc(35px + env(safe-area-inset-bottom));left:6%;right:6%;width:auto;max-width:580px;justify-content:flex-start; }
+  .menu h1,.touch-layout .menu h1 { font-size:44px; }
+  .menu .eyebrow,.touch-layout .menu .eyebrow { font-size:8px;margin-bottom:10px; }
+  .menu h2,.touch-layout .menu h2 { font-size:19px;margin-bottom:10px; }
+  .menu .gold-rule,.touch-layout .menu .gold-rule { margin:12px 0; }
+  .level-select,.touch-layout .level-select { max-height:220px; }
+  .level-select button,.touch-layout .level-select button { min-height:61px;padding:10px 6px; }
+  .level-select strong,.touch-layout .level-select strong { font-size:9px; }
+  .level-select small,.touch-layout .level-select small { font-size:7px; }
+  .level-select button > span,.touch-layout .level-select button > span { font-size:22px;margin-right:7px; }
+  .touch-layout .menu-description { font-size:12px;margin-bottom:15px; }
+  .touch-layout .menu-controls { font-size:11px;line-height:1.7; }
+  .touch-layout .combat-stats { top:calc(119px + var(--safe-top)); }
+  .touch-layout .boss-hud { left:auto;right:12px;transform:none;width:48%; }
+}
+@media (max-width:600px) and (max-height:740px) {
+  .menu-intro .menu-description,.menu-intro h2,.menu-intro .gold-rule { display:none; }
+  .menu-intro { margin-bottom:14px; }
+  .level-select,.touch-layout .level-select { max-height:190px; }
+  .touch-layout .menu h1 { font-size:36px; }
+  .touch-layout .battle-banner { top:calc(195px + var(--safe-top)); }
+}
+@media (orientation:landscape) and (max-height:600px) {
+  .touch-layout .menu-content { grid-template-columns:.85fr 1.15fr;align-content:start;top:calc(68px + var(--safe-top));bottom:calc(24px + var(--safe-bottom));width:auto; }
+  .touch-layout .level-select { max-height:148px; }
+  .touch-layout .level-select button { min-height:55px; }
+  .touch-layout .level-description { min-height:0;font-size:10px; }
+  .touch-layout .menu h1 { font-size:42px; }
+  .touch-layout .menu-description { display:block;font-size:12px; }
+  .touch-layout .menu-controls { font-size:10px; }
+  .touch-layout .boss-hud { top:calc(60px + var(--safe-top));left:50%;right:auto;transform:translateX(-50%);width:34%; }
+  .touch-layout .battle-banner { top:calc(105px + var(--safe-top)); }
+}

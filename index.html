@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#121c1e">
-  <meta name="description" content="Hold the crossing and storm Ember Gate. Recruit soldiers, catch moving weapon upgrades, and survive two escalating levels of 3D squad combat.">
+  <meta name="description" content="Ten worlds. One last line. Recruit a squad, discover powerful weapons, and defeat the guardians of the Borderlands.">
   <title>War: Survival</title>
   <link rel="icon" href="./assets/images/emblem.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="./css/mobile.css?v=0.3.2">
+  <link rel="stylesheet" href="./css/mobile.css?v=0.4.0">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.4.0">
 </head>
 <body>
   <div id="viewport" aria-label="3D battlefield"></div>
@@ -31,46 +32,37 @@
       <div class="menu-intro">
       <p class="eyebrow"><span></span> THE BORDERLANDS CAMPAIGN</p>
       <h1 id="menu-title">WAR<span class="title-colon">:</span><br><em>SURVIVAL</em></h1>
-      <div class="gold-rule"></div><h2>One bridge. Your last line.</h2>
+      <div class="gold-rule"></div><h2>Ten worlds. Your last line.</h2>
       <p class="menu-description"><span class="recruit-text">Shoot left to recruit +1.</span> Hold the center.<br><span class="weapon-text">Shoot right for bigger guns.</span><br>Grow your squad. Outgun the horde.</p>
       </div>
       <div class="menu-deploy">
-      <div class="level-select" role="group" aria-label="Choose a level">
-        <button data-level="0" aria-pressed="true"><span>01</span><strong>ASHEN CROSSING</strong><small>FIRST STAND</small></button>
-        <button data-level="1" aria-pressed="false"><span>02</span><strong>EMBER GATE</strong><small>HARDER ASSAULT</small></button>
-      </div>
+      <div class="campaign-heading"><span>CHOOSE YOUR SECTOR</span><small id="campaign-progress">0 / 10 CLEARED</small></div>
+      <div class="level-select" role="group" aria-label="Choose one of ten levels"></div>
       <p id="level-description" class="level-description">Dawn · Learn the three lanes · Fresh squad</p>
       <button id="start-button" class="primary-button">DEPLOY SQUAD <span aria-hidden="true">↗</span></button>
-      <div class="mission-facts"><span>4 WAVES</span><b>·</b><span>SHORT ENCOUNTER</span><b>·</b><span>3D SQUAD COMBAT</span></div>
+      <div class="mission-facts"><span>10 WORLDS</span><b>·</b><span>10 WEAPONS</span><b>·</b><span>ONE LAST LINE</span></div>
       <p class="menu-controls keyboard-only"><kbd>W A S D</kbd> / arrows / drag to move <span>•</span> Auto-fire<br><kbd>1</kbd> recruit <kbd>2</kbd> enemies <kbd>3</kbd> weapons <span>•</span> <kbd>SPACE</kbd> barrage</p>
-      <p class="menu-controls touch-only">Drag on the bridge to move · Your squad auto-fires<br>Tap a lane to aim · Tap Artillery to strike</p>
+      <p class="menu-controls touch-only">Drag on the bridge to move · Your squad auto-fires<br>Left: recruit · Center: enemies · Right: weapons<br>Tap Artillery when you need a hand</p>
       </div>
     </div>
     <div class="location-stamp"><span class="stamp-line"></span><span>THE BORDERLANDS<small>ASHEN CROSSING · DAWN</small></span></div>
-    <div class="build-stamp">THE EMBER GATE · 0.3.2</div>
+    <div class="build-stamp">THE BORDERLANDS CAMPAIGN · 0.4.0</div>
   </section>
   <div id="hud" class="hud hidden">
     <div id="boss-hud" class="boss-hud hidden"><span>THE CRIMSON WARDEN</span><div class="boss-track"><i id="boss-fill"></i></div></div>
     <div class="combat-stats"><span class="stat-caption">LEGION DEFEATED</span><strong id="kill-count">0</strong><span id="enemies-left">Awaiting contact</span></div>
-    <div class="armory-hud"><span class="stat-caption">RIGHT LANE · NEXT WEAPON</span><strong id="next-weapon">REPEATER</strong><span id="weapon-remaining">650 damage to unlock</span><div class="armory-track"><i id="weapon-progress"></i></div><small id="weapon-deadline">PASSES IN 21s</small></div>
     <div id="banner" class="battle-banner"><span id="banner-kicker"></span><strong id="banner-title"></strong><p id="banner-description"></p></div>
     <div id="callout" class="callout" role="status" aria-live="polite"></div>
     <div class="bottom-hud">
-      <div class="squad-card"><div class="squad-heading"><span class="squad-emblem">❖</span><div><span class="stat-caption">RIFLE SQUAD</span><strong><span id="squad-count">9</span> <small>SOLDIERS</small></strong></div><span id="health-number">100</span></div><div class="health-track"><i id="health-fill"></i></div><div class="squad-footer"><span>SQUAD INTEGRITY</span><span id="weapon-name">MK I · VOLLEY RIFLES</span></div></div>
+      <div class="squad-card"><div class="squad-heading"><span class="squad-emblem">❖</span><div><span class="stat-caption">YOUR SQUAD</span><strong><span id="squad-count">9</span> <small>SOLDIERS</small></strong></div><span id="health-number">100</span></div><div class="health-track"><i id="health-fill"></i></div><div class="squad-footer"><span>SQUAD INTEGRITY</span><span id="weapon-name">MK I · VOLLEY RIFLES</span></div><small id="buff-status" class="buff-status hidden"></small></div>
       <button id="barrage-button" class="ability-button" aria-label="Fire barrage (Space)"><span class="ability-icon" aria-hidden="true">↟</span><span><strong>ARTILLERY</strong><small id="barrage-status">BARRAGE READY</small></span><kbd>SPACE</kbd><i id="barrage-fill"></i></button>
     </div>
-    <div class="lane-controls" role="group" aria-label="Choose which lane to shoot">
-      <button data-lane="recruits" aria-pressed="false"><kbd>1</kbd><strong>+1 SOLDIER</strong><small>SHOOT LEFT</small></button>
-      <button data-lane="enemies" aria-pressed="true" class="active"><kbd>2</kbd><strong>HOLD THE LINE</strong><small>SHOOT CENTER</small></button>
-      <button data-lane="weapons" aria-pressed="false"><kbd>3</kbd><strong>BIGGER GUNS</strong><small>SHOOT RIGHT</small><span class="weapon-lane-details"><strong id="weapon-lane-name">REPEATER</strong><small id="weapon-lane-status">650 HP · 21s</small><span class="weapon-lane-track" aria-hidden="true"><i id="weapon-lane-progress"></i></span></span></button>
-    </div>
-    <div id="control-hint" class="control-hint">WASD / DRAG <span>MOVE</span><b>·</b> 1 / 2 / 3 <span>CHOOSE LANE</span><b>·</b> SPACE <span>BARRAGE</span><b>·</b> ESC <span>PAUSE</span></div>
     <div id="joystick" class="joystick hidden"><i></i></div>
   </div>
-  <section id="pause-panel" class="modal-layer hidden" aria-labelledby="pause-title"><div class="modal compact-modal"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pause-title">Holding position.</h2><p class="modal-description">Shoot left for +1 soldiers, center for enemies, and right for stronger guns. Finish floating weapon goals before they pass. A full squad hides recruits until you lose soldiers.<br><span class="keyboard-only">WASD or arrows move your squad. Keys 1 / 2 / 3 choose a lane. Space calls artillery.</span><span class="touch-only">Drag on the bridge to move. Lift your finger to stop. Tap a lane to steer there, or tap Artillery to strike. You can call artillery with a second finger while moving.</span><br>Dodge red impact zones to protect your soldiers.</p><button id="resume-button" class="primary-button">RETURN TO BATTLE <span>→</span></button><button id="quality-button" class="text-button">Graphics: High</button><button id="restart-button" class="text-button">Restart level</button><button data-menu class="text-button">Choose a level</button></div></section>
+  <section id="pause-panel" class="modal-layer hidden" aria-labelledby="pause-title"><div class="modal compact-modal"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pause-title">Holding position.</h2><p class="modal-description">Shoot left for +1 soldiers, center for enemies, and right for stronger guns. Finish floating weapon goals before they pass. A full squad hides recruits until you lose soldiers.<br><span class="keyboard-only">WASD or arrows move your squad. Keys 1 / 2 / 3 choose a lane. Space calls artillery.</span><span class="touch-only">Drag on the bridge to move. Lift your finger to stop. You can tap Artillery with a second finger while moving.</span><br>Shoot glowing supply pods for temporary boosts. Explosive carts damage nearby enemies. Dodge red impact zones to protect your soldiers.</p><button id="resume-button" class="primary-button">RETURN TO BATTLE <span>→</span></button><button id="quality-button" class="text-button">Graphics: High</button><button id="restart-button" class="text-button">Restart level</button><button data-menu class="text-button">Choose a level</button></div></section>
   <section id="result-panel" class="modal-layer hidden" aria-labelledby="result-title"><div class="modal compact-modal"><p id="result-kicker" class="eyebrow">MISSION COMPLETE</p><h2 id="result-title">The crossing holds.</h2><p id="result-description" class="modal-description"></p><div class="result-stats"><div><strong id="result-kills">0</strong><small>DEFEATED</small></div><div><strong id="result-time">0:00</strong><small>ELAPSED</small></div><div><strong id="result-health">100</strong><small>INTEGRITY</small></div></div><button id="next-level-button" class="primary-button hidden">NEXT LEVEL · EMBER GATE <span>→</span></button><button id="replay-button" class="primary-button">REPLAY LEVEL <span>↗</span></button><button data-menu class="text-button">Choose a level</button></div></section>
   <section id="error-panel" class="modal-layer hidden"><div class="modal compact-modal"><p class="eyebrow">UNABLE TO START</p><h2>Let's get you into battle.</h2><p id="error-message" class="modal-description">This game needs a browser with WebGL 2 enabled.</p><button class="primary-button" onclick="location.reload()">TRY AGAIN <span>↗</span></button></div></section>
   <noscript><div class="noscript">Enable JavaScript to play War: Survival.</div></noscript>
-  <script type="module" src="./js/main.js?v=0.3.2"></script>
+  <script type="module" src="./js/main.js?v=0.4.0"></script>
 </body>
 </html>

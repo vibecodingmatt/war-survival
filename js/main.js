@@ -1,12 +1,13 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js';
-import { createEnvironment } from './world/environment.js';
-import { createArmies } from './entities/army.js';
-import { createTargets } from './world/targets.js';
-import { createEffects } from './systems/effects.js';
-import { BattlefieldAudio } from './systems/audio.js';
-import { BARRAGE_COOLDOWN, WEAPONS, LIMITS, MAX_SQUAD, LEVELS, SUPPLY_EXIT } from '../data/waves.js';
-import { clamp } from './core/math.js';
+import { Simulation } from './core/simulation.js?v=0.4.0';
+import { createEnvironment } from './world/environment.js?v=0.4.0';
+import { createArmies } from './entities/army.js?v=0.4.0';
+import { createTargets } from './world/targets.js?v=0.4.0';
+import { createEffects } from './systems/effects.js?v=0.4.0';
+import { BattlefieldAudio } from './systems/audio.js?v=0.4.0';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS } from '../data/waves.js?v=0.4.0';
+import { clamp } from './core/math.js?v=0.4.0';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.4.0';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
@@ -23,13 +24,9 @@ function updateControls(touch=coarsePointer.matches){
   const changed=touchMode!==touch;touchMode=touch;
   document.documentElement.dataset.input=touch?'touch':'keyboard';
   document.documentElement.classList.toggle('touch-layout',touch||coarsePointer.matches);
-  $('control-hint').textContent=touch?'DRAG TO MOVE · TAP A LANE TO AIM':'WASD / ARROWS · MOVE     1 / 2 / 3 · AIM     SPACE · ARTILLERY     ESC · PAUSE';
   $('pause-button').title=touch?'Pause game':'Pause (Esc)';
-  const weaponButton=document.querySelector('[data-lane="weapons"]');
-  weaponButton.setAttribute('aria-label',touch?'Right lane: shoot for weapon upgrades':'Shoot right for weapon upgrades (3)');
-  weaponButton.setAttribute('aria-describedby',touch?'weapon-lane-name weapon-lane-status':'next-weapon weapon-remaining weapon-deadline');
   $('barrage-button').setAttribute('aria-label',touch?'Fire artillery barrage':'Fire artillery barrage (Space)');
-  renderer?.domElement.setAttribute('aria-label',touch?'Battlefield. Drag to move. Tap a lane to aim. Tap Artillery to strike.':'Battlefield. Use WASD or arrow keys to move; Space for artillery.');
+  renderer?.domElement.setAttribute('aria-label',touch?'Battlefield. Drag to move and aim. Tap Artillery to strike.':'Battlefield. Use WASD or arrow keys to move; Space for artillery.');
   if(changed&&!qualityManual)applyQuality(touch||coarsePointer.matches?'balanced':'high');
 }
 function applyQuality(value){
@@ -41,14 +38,22 @@ function applyQuality(value){
   if(camera)resize();
 }
 let selectedLevel=0;
+const levelSelect=document.querySelector('.level-select');
+levelSelect.replaceChildren();
+for(let i=0;i<LEVELS.length;i++){
+  const level=LEVELS[i],button=document.createElement('button');button.dataset.level=i;button.style.setProperty('--sector-color',level.world.accent);
+  button.innerHTML='<span>'+String(i+1).padStart(2,'0')+'</span><strong>'+level.name+'</strong><small>'+level.difficulty+'</small>';
+  button.setAttribute('aria-pressed',String(i===0));levelSelect.append(button);
+}
 function selectLevel(index){
   selectedLevel=index;
   const level=LEVELS[index];
   document.querySelectorAll('[data-level]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.level)===index)));
-  $('level-description').textContent=level.subtitle+' · Fresh squad';
+  $('level-description').textContent=level.world.description+' · '+level.weapons.slice(1).map(w=>w.name).join(' → ');
   $('start-button').firstChild.textContent='DEPLOY LEVEL '+(index+1)+' ';
   document.querySelector('.brand small').textContent='LEVEL '+(index+1)+' · '+level.name;
-  document.querySelector('.location-stamp small').textContent=level.name+' · '+(index?'DUSK':'DAWN');
+  document.querySelector('.location-stamp small').textContent=level.world.description;
+  if(sim.state==='menu'&&sim.level!==index){sim.reset(index);sim.preview();}
   environment?.setLevel(index);
 }
 
@@ -86,8 +91,8 @@ function processEvents(){
       $('banner').classList.add('visible');bannerTime=3.2;
     }
     if(e.type==='barrage')callout('ARTILLERY INBOUND',2);
-    if(e.type==='warning'||e.type==='regroup'||e.type==='supplyMissed')callout(e.text);
-    if(e.type==='recruit')callout('+1 SOLDIER · '+sim.player.squad+' IN YOUR SQUAD',1.1);
+    if(['warning','regroup','supplyMissed','supply','powerup'].includes(e.type))callout(e.text,e.type==='powerup'?2.8:2);
+    if(e.type==='recruit')callout('+'+e.amount+' SOLDIER'+(e.amount>1?'S':'')+' · '+sim.player.squad+' IN YOUR SQUAD',.8);
     if(e.type==='weapon'){callout(e.name+' UNLOCKED — NEW WEAPONS EQUIPPED',3.3);shake=Math.max(shake,.12);}
     if(e.type==='hurt'){flash=.6;shake=Math.max(shake,.12);}
     if(e.type==='casualty')callout('−'+e.amount+' SOLDIER'+(e.amount>1?'S':'')+' · RECRUIT REINFORCEMENTS',2);
@@ -96,8 +101,9 @@ function processEvents(){
     if(e.type==='victory'||e.type==='defeat'){
       const won=e.type==='victory';
       $('result-kicker').textContent=won?'LEVEL '+(sim.level+1)+' COMPLETE':'SQUAD OVERRUN';
-      $('result-title').textContent=won?(sim.level?'The gate is yours.':'The crossing holds.'):'A stand worth remembering.';
-      $('result-description').textContent=won?sim.levelData.bossName+' has fallen. '+sim.recruited+' recruited · '+sim.casualties+' lost · '+WEAPONS[sim.player.weaponLevel-1].name+'.':'The Legion broke through. Catch +1 bursts on the left and finish moving weapon goals before they pass. Return to the center before enemies get close.';
+      $('result-title').textContent=won?(sim.level===9?'The Borderlands are yours.':sim.level?'Sector secured.':'The crossing holds.'):'A stand worth remembering.';
+      $('result-description').textContent=won?sim.levelData.bossName+' has fallen. '+sim.recruited+' recruited · '+sim.casualties+' lost · '+sim.weapon.name+'.':'The Legion broke through. Catch +1 bursts on the left and finish moving weapon goals before they pass. Return to the center before enemies get close.';
+      if(sim.level<LEVELS.length-1)$('next-level-button').firstChild.textContent='NEXT · '+LEVELS[sim.level+1].name+' ';
       show('next-level-button',won&&sim.level<LEVELS.length-1);
       if(won){try{localStorage.setItem('war-survival-level-'+(sim.level+1),'complete');}catch{}updateCompletions();}
       $('result-kills').textContent=sim.kills;
@@ -108,29 +114,12 @@ function processEvents(){
   }
 }
 function updateHud(){
-  const p=sim.player,compactTouch=isTouch()&&innerWidth>innerHeight&&innerWidth<=700;
+  const p=sim.player;
   $('squad-count').textContent=p.squad;$('health-number').textContent=Math.ceil(p.health);
   $('health-fill').style.width=p.health+'%';$('health-fill').classList.toggle('low',p.health<35);
-  $('weapon-name').textContent='MK '+['I','II','III','IV'][p.weaponLevel-1]+' · '+WEAPONS[p.weaponLevel-1].name;
-  document.querySelectorAll('[data-lane]').forEach(button=>{
-    button.classList.toggle('active',button.dataset.lane===sim.focus);
-    button.setAttribute('aria-pressed',String(button.dataset.lane===sim.focus));
-  });
-  document.querySelector('[data-lane="recruits"] small').textContent=p.squad>=MAX_SQUAD?(compactTouch?'FULL · ':'SQUAD FULL · ')+MAX_SQUAD:sim.recruits.length?(compactTouch?'LEFT':'SHOOT LEFT'):(compactTouch?'IN ':'NEXT BURST · ')+Math.ceil(sim.recruitTimer)+'s';
-  document.querySelector('[data-lane="enemies"] small').textContent=compactTouch?'CENTER':'SHOOT CENTER';
-  document.querySelector('[data-lane="weapons"] small').textContent=sim.armory?(compactTouch?'RIGHT':'SHOOT RIGHT'):p.weaponLevel===WEAPONS.length?(compactTouch?'MAXED':'FULLY UPGRADED'):(compactTouch?'IN ':'INBOUND · ')+Math.ceil(sim.weaponTimer)+'s';
-  const target=sim.armory;
-  $('next-weapon').textContent=WEAPONS[p.weaponLevel]?.name||'MAX FIREPOWER';
-  $('weapon-remaining').textContent=target?Math.ceil(target.hp).toLocaleString()+' damage to unlock':p.weaponLevel===WEAPONS.length?'ALL WEAPONS EQUIPPED':'Next goal approaching';
-  const remaining=target?(SUPPLY_EXIT-target.z)/sim.levelData.weaponSpeed:0;
-  $('weapon-deadline').textContent=target?'PASSES IN '+Math.ceil(remaining)+'s':p.weaponLevel===WEAPONS.length?'': 'ARRIVES IN '+Math.ceil(sim.weaponTimer)+'s';
-  $('weapon-deadline').classList.toggle('urgent',!!target&&remaining<=5);
-  const progress=(target?(1-target.hp/target.maxHp)*100:p.weaponLevel===WEAPONS.length?100:0)+'%';
-  $('weapon-progress').style.width=progress;
-  $('weapon-lane-name').textContent=p.weaponLevel===3?'CANNON':WEAPONS[p.weaponLevel]?.name||'MAXED';
-  $('weapon-lane-status').textContent=target?Math.ceil(target.hp).toLocaleString()+(compactTouch?' · ':' HP · ')+Math.ceil(remaining)+'s':p.weaponLevel===WEAPONS.length?'EQUIPPED':'IN '+Math.ceil(sim.weaponTimer)+'s';
-  $('weapon-lane-status').classList.toggle('urgent',!!target&&remaining<=5);
-  $('weapon-lane-progress').style.width=progress;
+  $('weapon-name').textContent='MK '+['I','II','III','IV'][p.weaponLevel-1]+' · '+sim.weapon.name;
+  const buffs=[];if(sim.shield>0)buffs.push('SHIELD '+Math.ceil(sim.shield));for(const [kind,seconds] of Object.entries(sim.buffs))if(seconds>0)buffs.push(kind.toUpperCase()+' '+Math.ceil(seconds)+'s');
+  $('buff-status').textContent=buffs.join(' · ');show('buff-status',buffs.length>0);
   $('kill-count').textContent=sim.kills;
   $('enemies-left').textContent=sim.enemies.length?sim.enemies.length+' enemies incoming':'Crossing secured';
   $('wave-label').innerHTML='WAVE '+String(sim.wave+1).padStart(2,'0')+' <span>/ 04</span>';
@@ -140,7 +129,7 @@ function updateHud(){
   $('barrage-status').textContent=ready?'BARRAGE READY':'RELOADING · '+Math.ceil(sim.barrageCooldown)+'s';
   $('barrage-fill').style.width=(1-sim.barrageCooldown/BARRAGE_COOLDOWN)*100+'%';
   const boss=sim.enemies.find(e=>e.type==='boss');show('boss-hud',!!boss&&sim.state!=='menu');
-  if(boss){$('boss-fill').style.width=(boss.hp/boss.maxHp)*100+'%';document.querySelector('#boss-hud>span').textContent=sim.levelData.bossName;}
+  if(boss){$('boss-fill').style.width=(boss.hp/boss.maxHp)*100+'%';document.querySelector('#boss-hud>span').textContent=(boss.mini?'CHAMPION · ':'')+BOSS_TYPES[boss.bossType].name;}
 }
 function resize(){
   const portrait=innerWidth/innerHeight<.8;
@@ -170,7 +159,7 @@ function frame(timestamp){
   }else accumulator=0;
   processEvents();
   const visualDt=animating?dt:0;
-  environment.update(worldTime);armies.update(sim,worldTime);effects.update(sim,visualDt,worldTime,camera);targets.update(sim,worldTime);
+  environment.update(worldTime,reducedMotion);armies.update(sim,worldTime);effects.update(sim,visualDt,worldTime,camera);targets.update(sim,worldTime);
   if(bannerTime>0){bannerTime-=visualDt;if(bannerTime<=0)$('banner').classList.remove('visible');}
   if(calloutTime>0){calloutTime-=visualDt;if(calloutTime<=0)$('callout').classList.remove('visible');}
   shake=Math.max(0,shake-dt*.8);flash=Math.max(0,flash-dt*2);$('damage-flash').style.opacity=flash;
@@ -209,6 +198,7 @@ async function boot(){
         wave:index=>{sim.beginWave(clamp(index,0,3));processEvents();},
         damage:amount=>{sim.hurt(amount);},
         targets:()=>targets.snapshot(),
+        world:()=>environment.snapshot(),
         clear:()=>{for(const e of sim.enemies)sim.damage(e,e.hp+1,false);},
         renderer:()=>({...metrics,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,quality,pixelRatio:renderer.getPixelRatio(),shadowSize:environment.sun.shadow.mapSize.x}),
         controls:()=>({touch:touchMode,dragging:pointer.active,dx:pointer.dx,dz:pointer.dz,steerX:sim.steerX}),
@@ -220,10 +210,12 @@ async function boot(){
 $('start-button').addEventListener('click',()=>start());$('replay-button').addEventListener('click',()=>start());$('restart-button').addEventListener('click',()=>start());
 $('next-level-button').addEventListener('click',()=>start(sim.level+1));
 function updateCompletions(){
+  let cleared=0;
   for(const button of document.querySelectorAll('[data-level]')){
     let complete=false;try{complete=localStorage.getItem('war-survival-level-'+(Number(button.dataset.level)+1))==='complete';}catch{}
-    button.querySelector('small').textContent=complete?'COMPLETED ✓':LEVELS[Number(button.dataset.level)].difficulty;
+    button.querySelector('small').textContent=complete?'COMPLETED ✓':LEVELS[Number(button.dataset.level)].difficulty;if(complete)cleared++;
   }
+  $('campaign-progress').textContent=cleared+' / '+LEVELS.length+' CLEARED';
 }
 document.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>selectLevel(Number(button.dataset.level))));
 document.querySelectorAll('[data-menu]').forEach(button=>button.addEventListener('click',()=>{
@@ -250,7 +242,6 @@ combatButton($('barrage-button'),()=>{sim.barrage();renderer.domElement.focus();
 $('quality-button').addEventListener('click',()=>{
   qualityManual=true;applyQuality(quality==='high'?'balanced':'high');
 });
-document.querySelectorAll('[data-lane]').forEach(button=>combatButton(button,()=>{sim.selectLane(button.dataset.lane);renderer.domElement.focus();}));
 let layoutWidth=innerWidth,layoutHeight=innerHeight;
 addEventListener('resize',()=>{
   const rotated=(layoutWidth>layoutHeight)!==(innerWidth>innerHeight);
@@ -269,6 +260,7 @@ addEventListener('keydown',event=>{
     else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
   }
   if(sim.state!=='active')return;
+  if(event.code==='Space'&&!event.repeat)sim.barrage();
   if(['Digit1','Digit2','Digit3'].includes(event.code)){event.preventDefault();sim.selectLane(['recruits','enemies','weapons'][Number(event.code.slice(-1))-1]);return;}
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD'].includes(event.code)){event.preventDefault();keys.add(event.code);}
 });
