@@ -5,9 +5,10 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright-core');
 const base=process.env.TEST_URL||'http://127.0.0.1:4173/war-survival/';
 const output=path.resolve('test-results');fs.mkdirSync(output,{recursive:true});
 const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe';
+let browser;
 (async()=>{
  const {strategy:chooseInput}=await import('./strategy.mjs');
- const browser=await chromium.launch({executablePath,headless:true});
+ browser=await chromium.launch({executablePath,headless:true});
  const errors=[];
  const context=await browser.newContext({viewport:{width:1440,height:900}});
  const page=await context.newPage();
@@ -18,6 +19,10 @@ const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Ap
  await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});
  await page.waitForTimeout(800);
  await page.screenshot({path:path.join(output,'desktop-menu.png')});
+ await page.locator('[data-level="1"]').click();
+ assert.match(await page.locator('#level-description').textContent(),/Dusk/);
+ await page.waitForTimeout(200);await page.screenshot({path:path.join(output,'desktop-level2-menu.png')});
+ await page.locator('[data-level="0"]').click();
  await page.locator('#start-button').click();
  await page.keyboard.down('KeyD');await page.waitForTimeout(400);await page.keyboard.up('KeyD');
  let state=await page.evaluate(()=>window.__warTest.snapshot());assert.ok(state.x>1,'keyboard moves squad');
@@ -41,32 +46,57 @@ const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Ap
  await page.waitForTimeout(1000);
  assert.equal(await page.locator('[data-lane="weapons"]').getAttribute('aria-pressed'),'true');
  await page.screenshot({path:path.join(output,'desktop-repeater.png')});
+ await page.waitForFunction(()=>{const a=window.__warTest.snapshot().armory;return a&&a.hp<a.maxHp;},null,{timeout:8000});
  await page.keyboard.press('Digit2');await page.waitForTimeout(1200);
  const partial=await page.evaluate(()=>window.__warTest.snapshot().armory.hp);
  assert.ok(partial<2800,'next weapon goal takes damage');
  await page.waitForTimeout(400);
  assert.equal(await page.evaluate(()=>window.__warTest.snapshot().armory.hp),partial,'partial weapon progress persists in center lane');
- // Complete an encounter through the actual combat model with a deterministic tactical input policy.
+ // Complete both levels with ordinary tactical inputs, including the real next-level flow.
  await page.keyboard.press('Escape');await page.locator('#restart-button').click();
+ for(const level of [1,2]){
  let observedBoss=false,observedUpgrade=false,maxBullets=0,maxCorpses=0,seenLevel=1;
+ let checkedCasualty=false;
  for(let i=0;i<1100;i++){
    state=await page.evaluate(()=>window.__warTest.snapshot());
    maxBullets=Math.max(maxBullets,state.bullets);maxCorpses=Math.max(maxCorpses,state.corpses);
    if(state.state==='victory'||state.state==='defeat')break;
-   if(state.weaponLevel>seenLevel){observedUpgrade=true;seenLevel=state.weaponLevel;await page.waitForTimeout(50);await page.screenshot({path:path.join(output,'desktop-weapon-'+seenLevel+'.png')});}
+   if(state.squad===42&&!checkedCasualty){
+     checkedCasualty=true;await page.waitForTimeout(50);
+     assert.equal((await page.evaluate(()=>window.__warTest.targets())).recruits,0,'full squad hides every board');
+     await page.evaluate(()=>window.__warTest.damage(8));await page.waitForTimeout(100);
+     assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).squad,41);
+     assert.ok((await page.evaluate(()=>window.__warTest.snapshot())).fallen>0,'fallen soldier animates');
+     await page.screenshot({path:path.join(output,'level-'+level+'-casualty.png')});
+     await page.evaluate(()=>window.__warTest.step(1.65,{x:1,barrage:true}));await page.waitForTimeout(50);
+     assert.ok((await page.evaluate(()=>window.__warTest.targets())).recruits>0,'replacement recruit becomes visible');
+     state=await page.evaluate(()=>window.__warTest.snapshot());
+   }
+   if(state.weaponLevel>seenLevel){observedUpgrade=true;seenLevel=state.weaponLevel;await page.waitForTimeout(50);await page.screenshot({path:path.join(output,'level-'+level+'-weapon-'+seenLevel+'.png')});}
    if(state.wave===4&&!observedBoss){
      observedBoss=true;
      await page.evaluate(input=>window.__warTest.step(.5,input),chooseInput(state));
-     await page.waitForTimeout(250);await page.screenshot({path:path.join(output,'desktop-boss.png')});
+     await page.waitForTimeout(250);await page.screenshot({path:path.join(output,'level-'+level+'-boss.png')});
    }
    await page.evaluate(input=>window.__warTest.step(.15,input),chooseInput(state));
    if(i%40===0)await page.waitForTimeout(20);
  }
  assert.equal(state.state,'victory','tactical play can win a complete encounter');
- assert.ok(observedBoss&&observedUpgrade);assert.ok(maxBullets<=360&&maxCorpses<=72);
+ assert.ok(observedBoss&&observedUpgrade&&checkedCasualty);assert.ok(maxBullets<=360&&maxCorpses<=72);
  assert.equal(state.weaponLevel,4);assert.ok(state.recruited>=20);assert.ok(state.kills>600);
- await page.screenshot({path:path.join(output,'desktop-victory.png')});
- console.log('Full encounter:',state);
+ await page.screenshot({path:path.join(output,'level-'+level+'-victory.png')});
+ console.log('Full level:',{level:state.level,time:state.time,health:state.health,kills:state.kills,gun:state.weaponLevel,squad:state.squad,casualties:state.casualties,missed:state.missedWeapons});
+ if(level===1){
+   await page.locator('#next-level-button').click();
+   state=await page.evaluate(()=>window.__warTest.snapshot());
+   assert.equal(state.level,2);assert.equal(state.squad,9);assert.equal(state.weaponLevel,1);assert.equal(state.health,100);
+ }else{
+   assert.equal(await page.locator('#next-level-button').isVisible(),false);
+   assert.equal(await page.evaluate(()=>document.activeElement.id),'replay-button','result focuses a visible button');
+   await page.keyboard.press('Shift+Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement.hasAttribute('data-menu')),true,'result focus wraps past hidden next-level button');
+ }
+ }
  await page.locator('#replay-button').click();
  assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).kills,0,'replay resets kills');
  await page.evaluate(()=>window.__warTest.damage(100));await page.waitForTimeout(100);
@@ -74,6 +104,18 @@ const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Ap
  await page.locator('#replay-button').click();
  await page.locator('#sound-button').click();assert.equal(await page.locator('#sound-button').getAttribute('aria-label'),'Enable sound');
  await page.locator('#sound-button').click();
+ await page.keyboard.press('Escape');
+ await page.locator('#pause-panel [data-menu]').click();
+ assert.equal(await page.locator('[data-level="1"] small').textContent(),'COMPLETED ✓');
+ await page.locator('[data-level="1"]').click();await page.locator('#start-button').click();
+ const firstZ=await page.evaluate(()=>window.__warTest.targets().armoryZ);
+ await page.evaluate(()=>window.__warTest.step(1,{barrage:true}));await page.waitForTimeout(50);
+ assert.ok((await page.evaluate(()=>window.__warTest.targets())).armoryZ>firstZ,'weapon board travels toward squad');
+ await page.evaluate(()=>window.__warTest.step(15,{barrage:true}));await page.waitForTimeout(50);
+ assert.equal((await page.evaluate(()=>window.__warTest.targets())).armory,false,'missed weapon disappears');
+ assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).weaponLevel,1,'missing a weapon never upgrades it');
+ assert.match(await page.locator('#weapon-deadline').textContent(),/ARRIVES IN/);
+ await page.screenshot({path:path.join(output,'desktop-missed-weapon.png')});
  await page.keyboard.press('Escape');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  console.log('Desktop:',await page.evaluate(()=>window.__warTest.renderer()));
@@ -85,7 +127,9 @@ const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Ap
  await mobile.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});await mobile.waitForTimeout(700);
  assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'mobile does not overflow');
  await mobile.screenshot({path:path.join(output,'mobile-menu.png')});
+ await mobile.locator('[data-level="1"]').tap();
  await mobile.locator('#start-button').tap();
+ assert.equal((await mobile.evaluate(()=>window.__warTest.snapshot())).level,2);
  const cdp=await mobileContext.newCDPSession(mobile);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:190,y:520}]});
  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:245,y:485}]});
@@ -103,8 +147,14 @@ const executablePath=process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Ap
  await mobile.locator('[data-lane="weapons"]').tap();
  await mobile.waitForFunction(()=>window.__warTest.snapshot().weaponLevel===2,null,{timeout:12000});
  await mobile.screenshot({path:path.join(output,'mobile-weapon.png')});
+ await mobile.locator('#pause-button').tap();
+ await mobile.locator('#pause-panel [data-menu]').tap();
+ await mobile.setViewportSize({width:360,height:640});
+ await mobile.locator('#start-button').scrollIntoViewIfNeeded();
+ const buttonBounds=await mobile.locator('#start-button').boundingBox();assert.ok(buttonBounds.y>0&&buttonBounds.y+buttonBounds.height<640,'small screen deploy remains reachable');
+ await mobile.screenshot({path:path.join(output,'mobile-small-menu.png')});
  assert.deepEqual(errors,[],'no browser errors or missing assets');
  console.log('Mobile:',await mobile.evaluate(()=>window.__warTest.snapshot()));
- console.log('PASS: keyboard, mouse, touch, three firing lanes, +1 targets, persistent weapon goals, all weapon tiers, pause, artillery, complete win, defeat, restart, audio, and project-path hosting.');
+ console.log('PASS: both levels, next-level/reset flow, saved completions, keyboard/mouse/touch, moving goals and expiry, capped recruits, casualty/replacement visuals, all weapons, pause, artillery, wins, defeat, replay, responsive menus, audio, and project-path hosting.');
  await browser.close();
-})().catch(error=>{console.error(error);process.exitCode=1;});
+})().catch(async error=>{console.error(error);await browser?.close();process.exitCode=1;});

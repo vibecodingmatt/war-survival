@@ -244,13 +244,30 @@ export async function createEnvironment(scene, renderer) {
   const birdGeo=new T.BufferGeometry();birdGeo.setAttribute('position',new T.Float32BufferAttribute([-1,0,0,0,-.2,0,1,0,0],3));
   const birds=[];
   for(let i=0;i<7;i++){const bird=new T.Line(birdGeo,new T.LineBasicMaterial({color:0x465e5a}));bird.position.set(range(-45,45),range(18,28),range(-140,-90));bird.scale.setScalar(range(.7,1.3));scene.add(bird);birds.push(bird);}
+  let emberGate=false;
+  const moteOrigins=motePositions.slice();
   return {
     sun,
+    setLevel(index){
+      emberGate=index===1;
+      scene.fog.color.setHex(emberGate?0x837983:0xb9c6b6);scene.fog.density=emberGate?.008:.006;
+      sky.material.uniforms.zenith.value.set(emberGate?'#384b6b':'#608e9c');
+      sky.material.uniforms.horizon.value.set(emberGate?'#e8a878':'#f5ddb1');
+      sun.color.setHex(emberGate?0xffa05b:0xffd6a0);sun.intensity=emberGate?2.8:3.7;
+      sun.position.set(emberGate?-40:-32,emberGate?27:47,-26);
+      rim.color.setHex(emberGate?0x9ebeea:0x86b7c9);rim.intensity=emberGate?1.5:1;
+      scene.environmentIntensity=emberGate?.55:.7;
+      motes.material.color.setHex(emberGate?0xffa351:0xffe8ad);
+      motes.material.size=emberGate?.095:.055;motes.material.opacity=emberGate?.8:.55;
+      for(const bird of birds)bird.visible=!emberGate;
+      paving.material.color.setHex(emberGate?0xb5a59b:0xc0bca8);
+    },
     update(time) {
       waterUniform.value=time;leavesUniform.value=time;
       for(let i=0;i<flames.length;i++){const f=flames[i];f.scale.y=2+Math.sin(time*9+i*4)*.3;f.scale.x=1.3+Math.sin(time*13+i)*.13;}
       for(const banner of banners){const p=banner.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);p.setZ(i,Math.sin(time*2+y*2+banner.position.x)*.16*(2.7-y)/5.4);}p.needsUpdate=true;banner.geometry.computeVertexNormals();}
       motes.rotation.y=Math.sin(time*.035)*.06;
+      if(emberGate){for(let i=0;i<180;i++){motePositions[i*3]=moteOrigins[i*3]+Math.sin(time*.5+i)*.5;motePositions[i*3+1]=(moteOrigins[i*3+1]+time*.65)%18;}moteGeo.attributes.position.needsUpdate=true;}
       birds.forEach((bird,i)=>{bird.position.x+=Math.sin(time*.2+i)*.012;bird.rotation.z=Math.sin(time*2.5+i)*.1;});
     },
   };

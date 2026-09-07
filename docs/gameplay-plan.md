@@ -17,20 +17,24 @@ The supplied local video is `references/gameplay/war-survival.mp4`, approximatel
 - A fixed bridge arena instead of an endless scrolling runner.
 - Direct squad movement with automatic firing into a selected lane:
   left recruit boards, central enemies, or the right weapon goal.
-- Four finite enemy formations, including armored troops, grenadiers, and a
+- Four finite enemy formations per level, including armored troops, grenadiers, and a
   giant final commander.
-- A shared squad integrity meter; riflemen count represents firepower.
-- A continuously approaching stream of +1 boards, four weapon tiers earned by
-  shooting longer goals, and rechargeable artillery.
-- 617 enemies across four automatically advancing waves. Side targets trade
+- A shared squad integrity meter; damage costs riflemen, reducing firepower.
+- Small approaching bursts of +1 boards, hidden at 42 soldiers and reopened by
+  casualties. Four weapon tiers earned by shooting floating goals before their
+  countdown expires, plus rechargeable artillery.
+- 617 enemies in Ashen Crossing and 741 in Ember Gate. Side targets trade
   immediate defense for the firepower needed to survive later ranks.
 - Enemy ranged attacks and boss attacks use red warning circles that allow dodging.
 - Original geometry, animation, effects, and interface; CC0 surface textures
   add weathering and material detail.
 
-The encounter remains limited to one environment. Volley rifles upgrade to
-repeaters, Gatlings, and splash-damage siege cannons during a run. There is no
-campaign, saved progression, multiplayer, or endless mode in this iteration.
+The two levels share the bridge layout. Ashen Crossing uses warm dawn light;
+Ember Gate adds dusk lighting and drifting embers. The second assault has faster
+troops, more armor and grenadiers, shorter weapon windows, and a stronger boss.
+Volley rifles upgrade to repeaters, Gatlings, and splash-damage siege cannons.
+Each level starts fresh, with direct selection and a next-level victory flow.
+Completion checkmarks persist locally. There is no multiplayer or endless mode.
 
 ## Useful playtest feedback
 

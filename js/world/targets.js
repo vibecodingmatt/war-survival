@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { WEAPONS, MAX_SQUAD } from '../../data/waves.js';
+import { WEAPONS, MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js';
 
 function canvasTexture(width,height,draw){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
@@ -22,10 +22,10 @@ export function createTargets(scene){
   const frame=new T.Mesh(new T.BoxGeometry(2.9,3.85,.3),new T.MeshStandardMaterial({color:0xb79858,metalness:.7,roughness:.32}));
   const front=new T.Mesh(new T.PlaneGeometry(2.76,3.69),new T.MeshStandardMaterial({map:armoryCanvas.texture,roughness:.6,emissive:0x6f501a,emissiveIntensity:.24}));
   front.position.z=.16;armory.add(frame,front);armory.position.set(5.45,2.5,-4);scene.add(armory);
-  const postMat=new T.MeshStandardMaterial({color:0x7f6943,metalness:.6,roughness:.5});
-  for(const x of [-.85,.85]){const post=new T.Mesh(new T.CylinderGeometry(.055,.055,2,8),postMat);post.position.set(x,-2,0);armory.add(post);}
+  const halo=new T.Mesh(new T.RingGeometry(.65,1.1,32),new T.MeshBasicMaterial({color:0xffce79,transparent:true,opacity:.35,side:T.DoubleSide,depthWrite:false}));
+  halo.rotation.x=-Math.PI/2;halo.position.y=-2.2;armory.add(halo);
   let previous='',hit=0,lastDraw=-1,lastLevel=0;
-  function drawArmory(target,level){
+  function drawArmory(target,level,remaining){
     const c=armoryCanvas.ctx,w=384,h=512,next=WEAPONS[level],progress=target?1-Math.max(0,target.hp)/target.maxHp:1;
     c.fillStyle='#162e36';c.fillRect(0,0,w,h);
     const fill=c.createLinearGradient(0,0,0,h);fill.addColorStop(0,'#3b5960');fill.addColorStop(1,'#10252b');c.fillStyle=fill;c.fillRect(12,12,w-24,h-24);
@@ -39,26 +39,29 @@ export function createTargets(scene){
     c.fillStyle='#91b6b9';c.font='18px Arial';c.fillText(target?'DAMAGE REMAINING':'MAXIMUM FIREPOWER',w/2,321);
     c.fillStyle='#fff';c.font='bold 66px Arial';c.fillText(target?Math.ceil(Math.max(0,target.hp)).toLocaleString():'MAX',w/2,392);
     c.fillStyle='#081b23';c.fillRect(35,421,314,20);c.fillStyle='#f2c974';c.fillRect(35,421,314*progress,20);
-    c.fillStyle='#c4d3c7';c.font='17px Arial';c.fillText('PROGRESS SAVED WHEN YOU SWITCH',w/2,477);
+    c.fillStyle=remaining<=5?'#ff9c7d':'#c4d3c7';c.font='bold 23px Arial';c.fillText('PASSES IN '+Math.ceil(remaining)+'s',w/2,480);
     armoryCanvas.texture.needsUpdate=true;
   }
   return {
     update(sim,time){
-      const ids=new Set(sim.recruits.filter(r=>r.hp>0).map(r=>r.id));
+      const ids=new Set(sim.recruits.filter(r=>r.hp>0&&sim.player.squad<MAX_SQUAD).map(r=>r.id));
       for(const [id,group] of recruits)if(!ids.has(id)){scene.remove(group);recruits.delete(id);}
       for(const target of sim.recruits){
-        if(target.hp<=0)continue;
+        if(!ids.has(target.id))continue;
         let group=recruits.get(target.id);
         if(!group){group=new T.Group();const body=new T.Mesh(bodyGeometry,sideMat),face=new T.Mesh(faceGeometry,faceMat);face.position.z=.24;group.add(body,face);scene.add(group);recruits.set(target.id,group);}
         group.position.set(target.x,1.02+Math.sin(time*2+target.id)*.045,target.z);
-        group.rotation.x=-.08;group.scale.setScalar(sim.player.squad>=MAX_SQUAD?.75:1);
+        group.rotation.x=-.08;group.scale.setScalar(1);
       }
-      const key=(sim.armory?Math.ceil(sim.armory.hp):'max')+':'+sim.player.weaponLevel;
-      if(key!==previous&&(time-lastDraw>.1||lastLevel!==sim.player.weaponLevel)){drawArmory(sim.armory,sim.player.weaponLevel);previous=key;lastDraw=time;lastLevel=sim.player.weaponLevel;}
+      armory.visible=!!sim.armory;
+      const remaining=sim.armory?(SUPPLY_EXIT-sim.armory.z)/sim.levelData.weaponSpeed:0;
+      const key=(sim.armory?sim.armory.id+':'+Math.ceil(sim.armory.hp):'none')+':'+Math.ceil(remaining)+':'+sim.player.weaponLevel;
+      if(sim.armory&&key!==previous&&(time-lastDraw>.1||lastLevel!==sim.player.weaponLevel)){drawArmory(sim.armory,sim.player.weaponLevel,remaining);previous=key;lastDraw=time;lastLevel=sim.player.weaponLevel;}
+      if(sim.armory)armory.position.set(sim.armory.x,sim.armory.y+Math.sin(time*2)*.12,sim.armory.z);
       hit=sim.armory?.hit||0;front.material.emissiveIntensity=.2+hit*.8;
       armory.rotation.z=Math.sin(time*42)*hit*.009;
       sideMat.emissive.setHex(sim.focus==='recruits'?0x13578c:0x000000);
-      faceMat.color.setHex(sim.player.squad>=MAX_SQUAD?0x54737d:0xffffff);
     },
+    snapshot:()=>({recruits:recruits.size,armory:armory.visible,armoryZ:armory.position.z}),
   };
 }

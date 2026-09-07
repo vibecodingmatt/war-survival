@@ -1,13 +1,15 @@
-import { WAVES, WEAPONS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD } from '../../data/waves.js';
+import { LEVELS, WEAPONS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js';
 import { clamp, randomSource, formation } from './math.js';
 
 export class Simulation {
   constructor(seed = 731) { this.seed = seed; this.reset(); this.preview(); }
-  reset() {
+  get levelData() { return LEVELS[this.level]; }
+  reset(level = 0) {
+    this.level = clamp(Math.floor(Number(level) || 0), 0, LEVELS.length - 1);
     this.random = randomSource(this.seed);
     this.state = 'menu'; this.time = 0; this.waveTime = 0; this.wave = 0; this.kills = 0;
     this.player = { x: 0, z: 11, vx: 0, vz: 0, health: 100, squad: 9, weaponLevel: 1 };
-    this.enemies = []; this.corpses = []; this.bullets = []; this.zones = [];
+    this.enemies = []; this.corpses = []; this.fallen = []; this.bullets = []; this.zones = [];
     this.recruits = []; this.armory = null; this.events = [];
     this.shootTimers = Array.from({ length: MAX_SQUAD }, (_, i) => i * .037);
     this.recoil = Array(MAX_SQUAD).fill(0); this.aim = Array(MAX_SQUAD).fill(0);
@@ -15,6 +17,7 @@ export class Simulation {
     this.hurtCooldown = 0; this.bossTimer = 5; this.recruitTimer = 0;
     this.recruitHitCooldown = 0; this.focus = 'enemies'; this.steerX = null;
     this.recruited = 0; this.breaches = 0; this.shots = { recruits: 0, enemies: 0, weapons: 0 };
+    this.weaponTimer = 0; this.missedWeapons = 0; this.casualties = 0; this.casualtyDamage = 0;
   }
   preview() {
     for (let i = 0; i < 96; i++) this.spawnEnemy(i, { hp: 80, speed: 2 }, i === 88 ? 'boss' : 'soldier');
@@ -22,22 +25,28 @@ export class Simulation {
   }
   createTargets() {
     this.recruits = [];
-    for (let i = 0; i < 8; i++) this.addRecruit(-1 - i * 5);
+    this.recruitBurst(-3);
     this.createArmory();
   }
-  addRecruit(z = -43) {
+  recruitBurst(z = -24) {
+    if (this.player.squad >= MAX_SQUAD) return;
+    const count = Math.min(this.levelData.recruitBatch, MAX_SQUAD - this.player.squad);
+    for (let i = 0; i < count; i++) this.addRecruit(z - i * 2.4);
+    this.recruitTimer = this.levelData.recruitInterval;
+  }
+  addRecruit(z = -24) {
     this.recruits.push({ id: this.nextId++, type: 'recruit', x: -5.55, y: 1, z, hp: 1, maxHp: 1, reserved: 0, scale: 1, hit: 0 });
   }
   createArmory() {
     const next = WEAPONS[this.player.weaponLevel];
-    this.armory = next ? { id: this.nextId++, type: 'weapon', x: 5.55, y: 2, z: -4,
+    this.armory = next ? { id: this.nextId++, type: 'weapon', x: 5.55, y: 2.5, z: -14,
       hp: next.cost, maxHp: next.cost, reserved: 0, scale: 1.6, hit: 0, level: this.player.weaponLevel + 1 } : null;
   }
-  start() { this.reset(); this.state = 'active'; this.createTargets(); this.beginWave(0); }
+  start(level = this.level) { this.reset(level); this.state = 'active'; this.createTargets(); this.beginWave(0); }
   beginWave(index) {
     this.wave = index; this.waveTime = 0; this.clearTimer = -1;
     this.enemies = []; this.zones = []; this.state = 'active'; this.bossTimer = 5;
-    const wave = WAVES[index];
+    const wave = this.levelData.waves[index];
     for (let i = 0; i < wave.count; i++) {
       const type = i >= wave.count - wave.grenadiers ? 'grenadier' : i < wave.brutes ? 'brute' : 'soldier';
       this.spawnEnemy(i, wave, type);
@@ -46,7 +55,7 @@ export class Simulation {
     this.events.push({ type: 'wave', index, name: wave.name, description: wave.description });
   }
   spawnEnemy(index, wave, type = 'soldier') {
-    const boss = type === 'boss', brute = type === 'brute', hp = boss ? 11500 : wave.hp * (brute ? 2.3 : 1);
+    const boss = type === 'boss', brute = type === 'brute', hp = boss ? this.levelData.bossHp : wave.hp * (brute ? 2.3 : 1);
     this.enemies.push({
       id: this.nextId++, type, x: boss ? 0 : (index % 9 - 4) * .94 + (this.random() - .5) * .14,
       z: boss ? -55 : -26 - Math.floor(index / 9) * 1.62,
@@ -81,8 +90,7 @@ export class Simulation {
   target(x, z) {
     if (this.focus === 'recruits') {
       if (this.recruitHitCooldown > 0 || this.player.squad >= MAX_SQUAD) return null;
-      // One active +1 target at a time: the rest remain visible as an approaching stream.
-      return this.recruits.find(t => t.hp > 0 && t.reserved === 0 && t.z < this.player.z - 2 && this.player.z - t.z < 45) || null;
+      return this.recruits.find(t => t.hp > 0 && t.reserved === 0 && Math.abs(this.player.z - t.z) < 45) || null;
     }
     if (this.focus === 'weapons') return this.armory?.hp > this.armory?.reserved ? this.armory : null;
     let selected = null, best = Infinity;
@@ -109,11 +117,7 @@ export class Simulation {
     this.focus = p.x < -LANE_THRESHOLD ? 'recruits' : p.x > LANE_THRESHOLD ? 'weapons' : 'enemies';
     if (input.barrage) this.barrage();
 
-    this.recruitTimer -= dt;
-    for (const target of this.recruits) { target.z += dt * 2.4; target.hit = Math.max(0, target.hit - dt * 5); }
-    this.recruits = this.recruits.filter(t => t.hp > 0 && t.z < 20);
-    if (this.recruitTimer <= 0 && this.recruits.length < 12) { this.addRecruit(); this.recruitTimer = .8; }
-    if (this.armory) this.armory.hit = Math.max(0, this.armory.hit - dt * 5);
+    this.updateSupplies(dt);
     const weapon = WEAPONS[p.weaponLevel - 1];
     for (let i = 0; i < p.squad; i++) {
       this.shootTimers[i] -= dt; this.recoil[i] = Math.max(0, this.recoil[i] - dt * 6);
@@ -147,8 +151,8 @@ export class Simulation {
         this.bossTimer -= dt;
         if (this.bossTimer <= 0) {
           this.bossTimer = enemy.hp < enemy.maxHp * .45 ? 4 : 5.5;
-          for (let n = 0; n < 2; n++) this.zones.push({ id: this.nextId++, x: clamp(p.x + (n - .5) * 2.2, -5.4, 5.4),
-            z: p.z + n * .6, radius: 2, remaining: 2 + n * .2, total: 2 + n * .2, friendly: false, damage: 13 });
+          for (let n = 0; n < this.levelData.impactCount; n++) this.zones.push({ id: this.nextId++, x: clamp(p.x + (n - (this.levelData.impactCount - 1) / 2) * 2.2, -5.4, 5.4),
+            z: p.z + n * .6, radius: 2, remaining: this.levelData.impactFuse + n * .2, total: this.levelData.impactFuse + n * .2, friendly: false, damage: this.levelData.impactDamage });
           this.events.push({ type: 'warning', text: 'INCOMING IMPACT — MOVE OUT OF THE RED ZONES' });
         }
       } else if (enemy.type === 'grenadier' && dz < 37 && enemy.attackTimer <= 0) {
@@ -195,15 +199,47 @@ export class Simulation {
     this.enemies = this.enemies.filter(e => e.hp > 0);
     for (const corpse of this.corpses) corpse.age += dt;
     this.corpses = this.corpses.filter(c => c.age < 4.5).slice(-72);
+    for (const soldier of this.fallen) soldier.age += dt;
+    this.fallen = this.fallen.filter(c => c.age < 4.5).slice(-MAX_SQUAD);
     if (p.health <= 0) { this.finish(false); return; }
     if (!this.enemies.length) {
       this.zones = [];
       if (this.clearTimer < 0) { this.clearTimer = 3; this.events.push({ type: 'regroup', text: 'WAVE CLEARED — KEEP FIRING. NEXT ASSAULT IN 3s' }); }
       this.clearTimer -= dt;
       if (this.clearTimer <= 0) {
-        if (this.wave === WAVES.length - 1) this.finish(true);
+        if (this.wave === this.levelData.waves.length - 1) this.finish(true);
         else { p.health = Math.min(100, p.health + 10); this.beginWave(this.wave + 1); }
       }
+    }
+  }
+  clearRecruits() {
+    // Invalidate targets already being chased by bullets as well as visible boards.
+    for (const target of this.recruits) target.hp = 0;
+    this.recruits = [];
+  }
+  updateSupplies(dt) {
+    if (this.player.squad >= MAX_SQUAD) this.clearRecruits();
+    else {
+      this.recruitTimer = Math.max(0, this.recruitTimer - dt);
+      for (const target of this.recruits) {
+        target.z += dt * this.levelData.recruitSpeed;
+        target.hit = Math.max(0, target.hit - dt * 5);
+        if (target.z >= SUPPLY_EXIT) target.hp = 0;
+      }
+      this.recruits = this.recruits.filter(t => t.hp > 0);
+      if (this.recruitTimer <= 0 && this.recruits.length <= 6) this.recruitBurst();
+    }
+    if (this.armory) {
+      this.armory.z += dt * this.levelData.weaponSpeed;
+      this.armory.hit = Math.max(0, this.armory.hit - dt * 5);
+      if (this.armory.z >= SUPPLY_EXIT) {
+        this.armory.hp = 0; this.armory = null; this.missedWeapons++;
+        this.weaponTimer = this.levelData.weaponInterval;
+        this.events.push({ type: 'supplyMissed', text: 'WEAPON PASSED — ANOTHER CHANCE IS ON THE WAY' });
+      }
+    } else if (this.player.weaponLevel < WEAPONS.length) {
+      this.weaponTimer = Math.max(0, this.weaponTimer - dt);
+      if (this.weaponTimer <= 0) this.createArmory();
     }
   }
   damage(target, amount, blast) {
@@ -211,30 +247,50 @@ export class Simulation {
     target.hp -= amount; target.hit = 1; target.blast = blast;
     this.events.push({ type: 'hit', x: target.x, y: target.y || target.scale * 1.2, z: target.z, blast, scale: target.scale, friendly: ['recruit', 'weapon'].includes(target.type) });
     if (target.type === 'recruit') {
-      if (target.hp <= 0 && this.player.squad < MAX_SQUAD) { this.player.squad++; this.recruited++; this.events.push({ type: 'recruit', x: target.x, z: target.z, amount: 1 }); }
+      if (target.hp <= 0 && this.player.squad < MAX_SQUAD) {
+        this.player.squad++; this.recruited++;
+        this.events.push({ type: 'recruit', x: target.x, z: target.z, amount: 1 });
+        if (this.player.squad === MAX_SQUAD) this.clearRecruits();
+      }
     } else if (target.type === 'weapon') {
       if (target.hp <= 0 && target === this.armory) {
         this.player.weaponLevel++; this.events.push({ type: 'weapon', level: this.player.weaponLevel, name: WEAPONS[this.player.weaponLevel - 1].name, x: target.x, z: target.z });
-        this.createArmory();
+        this.armory = null; this.weaponTimer = this.levelData.weaponInterval;
       }
     } else if (blast && target.type !== 'boss') target.knockback = .35;
   }
   hurt(amount, breach = false) {
     if (this.state !== 'active' || (!breach && this.hurtCooldown > 0)) return;
     this.player.health = Math.max(0, this.player.health - amount);
+    this.casualtyDamage += amount;
+    const losses = Math.min(this.player.squad - 1, Math.floor(this.casualtyDamage / 8));
+    this.casualtyDamage %= 8;
+    if (losses > 0) {
+      const p = this.player;
+      for (let i = 0; i < losses; i++) {
+        const f = formation(p.squad - 1 - i, p.squad);
+        this.fallen.push({ x: p.x + f.x, z: p.z + f.z, scale: 1.08, age: 0, yaw: 0,
+          spin: (this.random() - .5) * 3, lift: 1.6, weaponLevel: p.weaponLevel });
+      }
+      p.squad -= losses; this.casualties += losses;
+      this.recruitTimer = Math.min(this.recruitTimer, 1.5);
+      this.events.push({ type: 'casualty', amount: losses });
+    }
     if (!breach) this.hurtCooldown = .22;
     this.events.push({ type: 'hurt', amount });
   }
   finish(won) { this.state = won ? 'victory' : 'defeat'; this.bullets = []; this.zones = []; this.events.push({ type: this.state }); }
   drainEvents() { const events = this.events; this.events = []; return events; }
   snapshot() {
-    return { state: this.state, wave: this.wave + 1, time: this.time, kills: this.kills, health: this.player.health,
+    return { state: this.state, level: this.level + 1, levelName: this.levelData.name, wave: this.wave + 1, time: this.time, kills: this.kills, health: this.player.health,
       squad: this.player.squad, weaponLevel: this.player.weaponLevel, weaponName: WEAPONS[this.player.weaponLevel - 1].name,
       focus: this.focus, recruited: this.recruited, breaches: this.breaches, shots: { ...this.shots },
+      casualties: this.casualties, fallen: this.fallen.length, missedWeapons: this.missedWeapons,
+      nextRecruits: this.recruitTimer, nextWeapon: this.weaponTimer,
       x: this.player.x, z: this.player.z, enemies: this.enemies.length,
       nearestEnemy: this.enemies.length ? Math.max(...this.enemies.map(e => e.z)) : -100,
       bullets: this.bullets.length, corpses: this.corpses.length, cooldown: this.barrageCooldown,
-      armory: this.armory ? { hp: this.armory.hp, maxHp: this.armory.maxHp, level: this.armory.level, name: WEAPONS[this.armory.level - 1].name } : null,
+      armory: this.armory ? { hp: this.armory.hp, maxHp: this.armory.maxHp, z: this.armory.z, remaining: (SUPPLY_EXIT - this.armory.z) / this.levelData.weaponSpeed, level: this.armory.level, name: WEAPONS[this.armory.level - 1].name } : null,
       recruits: this.recruits.filter(t => t.hp > 0).length,
       zones: this.zones.map(z => ({ x: z.x, z: z.z, radius: z.radius, friendly: z.friendly, remaining: z.remaining })),
       bossHealth: this.enemies.find(e => e.type === 'boss')?.hp || 0 };

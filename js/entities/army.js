@@ -121,7 +121,7 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
         const gait=dead?0:Math.sin(phase)*(blue?Math.min(1,moving/3)*.6:.56);
         const bob=dead?0:Math.abs(Math.cos(phase))*(blue?.035:.065);
         root.position.set(unit.x,(unit.y||0)+bob,unit.z);
-        root.rotation.set(0,aim?aim[i]||0:unit.yaw||0,0);
+        root.rotation.set(0,aim&&!dead?aim[i]||0:unit.yaw||0,0);
         root.scale.set(size*(heavy?1.16:1),size,size);
         if(dead){
           const progress=Math.min(1,age*3.1);
@@ -131,7 +131,7 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
           if(age>3.8)root.position.y-=(age-3.8)*1.7;
           root.scale.multiplyScalar(Math.max(.01,Math.min(1,(5-age)*1.3)));
         }
-        if(blue&&recoils)root.rotation.x=-recoils[i]*.045;
+        if(blue&&recoils&&!dead)root.rotation.x=-recoils[i]*.045;
         root.updateMatrix();
         for(const p of parts){
           limb.position.set(0,0,0);limb.rotation.set(0,0,0);
@@ -158,14 +158,18 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
 }
 
 export function createArmies(scene) {
-  const squads=[1,2,3,4].map(level=>createArmy(scene,MAX_SQUAD,true,false,level));
-  const legion=createArmy(scene,300,false),heavies=createArmy(scene,32,false,true);
+  const squads=[1,2,3,4].map(level=>createArmy(scene,MAX_SQUAD*2,true,false,level));
+  const legion=createArmy(scene,360,false),heavies=createArmy(scene,40,false,true);
   const blueUnits=Array.from({length:MAX_SQUAD},()=>({x:0,z:0,scale:1.08,phase:0}));
   return {
     update(sim,time) {
       const p=sim.player;
       for(let i=0;i<p.squad;i++){const f=formation(i,p.squad),u=blueUnits[i];u.x=p.x+f.x;u.z=p.z+f.z;u.phase=time*10+i*.8;}
-      for(let level=0;level<4;level++)squads[level].update(level===p.weaponLevel-1?blueUnits.slice(0,p.squad):[],time,Math.hypot(p.vx,p.vz),sim.recoil,sim.aim);
+      for(let level=0;level<4;level++){
+        const units=level===p.weaponLevel-1?blueUnits.slice(0,p.squad):[];
+        units.push(...sim.fallen.filter(soldier=>soldier.weaponLevel===level+1));
+        squads[level].update(units,time,Math.hypot(p.vx,p.vz),sim.recoil,sim.aim);
+      }
       const regular=[],heavy=[];
       for(const e of [...sim.enemies,...sim.corpses]) (e.type==='boss'||e.type==='brute'?heavy:regular).push(e);
       legion.update(regular,time);heavies.update(heavy,time);

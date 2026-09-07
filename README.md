@@ -1,10 +1,13 @@
 # War: Survival
 
-**Ashen Crossing — The Growing Horde, v0.2.0**
+**The Ember Gate, v0.3.0**
 
 Lead a blue rifle squad against the Crimson Legion on a ruined stone bridge above
-a jungle gorge. Survive four waves with **617 enemies**, build your squad by
-shooting +1 targets, unlock bigger guns, and defeat the Crimson Warden.
+a jungle gorge. Beat **Level 1: Ashen Crossing** (617 enemies), then take on
+**Level 2: Ember Gate** (741 enemies) at dusk, with faster formations, heavier
+armor, shorter supply windows, and the Ember Marshal's three-impact attacks.
+Both levels have four waves and can be selected immediately for playtesting.
+Each starts with nine riflemen; beating Level 1 offers a Next Level button.
 
 **Play:** https://vibecodingmatt.github.io/war-survival/
 
@@ -25,10 +28,14 @@ Your position selects what the squad shoots. The lane buttons (or 1 / 2 / 3)
 steer you to the corresponding lane; manual movement takes over immediately.
 
 - **Left:** each blue +1 board you shoot adds exactly one soldier, up to 42.
-  Boards approach continuously; walking into them does not collect them.
+  Boards arrive in bursts of up to six, about 10–11 seconds apart. They disappear
+  at the squad cap and return after casualties. Walking into them grants nothing.
 - **Center:** shoot the horde. It keeps advancing while you invest in upgrades.
 - **Right:** work down a tougher weapon goal. Partial damage stays when you
-  switch lanes or finish a wave.
+  switch lanes or finish a wave, **until that board passes the squad**.
+  Boards float down the right lane with a visible countdown (about 21 seconds
+  in Level 1, 16 in Level 2). A missed goal returns after a 4–5 second gap with
+  full health. The next gun also arrives after a short gap when you unlock one.
 
 Weapons progress through **Volley Rifle → Repeater → Gatling → Siege Cannon**.
 Each changes the actual model, fire rate, damage, sound, and tracer effects;
@@ -38,6 +45,9 @@ damage, so a larger squad helps unlock them faster.
 Waves advance automatically after a three-second breather, restoring 10 integrity
 without granting soldiers or weapons. Red circles mark incoming impacts.
 Artillery reloads every 14 seconds and damages only enemies.
+Every eight accumulated integrity damage costs one rifleman, down to the last
+soldier; losses animate on the bridge. Healing between waves does not replace
+soldiers. Recruitment rebuilds your firepower; reaching zero integrity ends the run.
 The pause menu includes a **Balanced** graphics setting.
 
 ## Local development
@@ -76,7 +86,8 @@ references/gameplay/           Local reference video (ignored by Git)
 
 The game has no runtime CDN, API, font, account, or backend dependency. All
 rendering libraries and textures are hosted with the site. Sound is synthesized
-locally; only the sound preference is stored in the browser. Runs start fresh.
+locally. Sound preference and level completion checkmarks are stored in the
+browser when storage is available. Runs start fresh and no level is locked.
 
 ## Verification
 
@@ -92,10 +103,12 @@ The browser suite requires a running preview server and Chrome. Set
 to a deployed site. Browser screenshots go into ignored `test-results/`.
 
 Simulation checks cover exclusive lane targeting, one-time recruit rewards,
-squad caps, persistent weapon progress, all four weapon tiers, automatic waves,
-damage, defeat, pause, artillery, restart, and multi-seed balance regressions.
+squad caps and replacement recruits, timed bursts, moving weapon deadlines,
+expired in-flight shots, all four weapon tiers, automatic waves, casualties,
+defeat, pause, artillery, level selection, restart, and multi-seed balance.
 Browser checks exercise keyboard, mouse, touch, lane buttons, target shooting,
-all gun unlocks, responsive layouts, a complete tactical win, defeat, and replay.
+all gun unlocks, responsive layouts, both complete levels, the Next Level button,
+casualty/recruit visuals, missed goals, defeat, and replay.
 See [balance notes](docs/balance.md) for the tested strategies.
 
 Test instrumentation is available only with `?test=1`; it is absent during

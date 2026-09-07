@@ -5,7 +5,7 @@ import { createArmies } from './entities/army.js';
 import { createTargets } from './world/targets.js';
 import { createEffects } from './systems/effects.js';
 import { BattlefieldAudio } from './systems/audio.js';
-import { BARRAGE_COOLDOWN, WEAPONS, LIMITS, MAX_SQUAD } from '../data/waves.js';
+import { BARRAGE_COOLDOWN, WEAPONS, LIMITS, MAX_SQUAD, LEVELS, SUPPLY_EXIT } from '../data/waves.js';
 import { clamp } from './core/math.js';
 
 const $=id=>document.getElementById(id);
@@ -17,17 +17,29 @@ let frames=0,frameTotal=0,metrics={fps:0,calls:0,triangles:0},modal=null;
 const keys=new Set(),pointer={active:false,id:null,x:0,y:0,dx:0,dz:0};
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isTouch=()=>matchMedia('(pointer: coarse)').matches;
+let selectedLevel=0;
+function selectLevel(index){
+  selectedLevel=index;
+  const level=LEVELS[index];
+  document.querySelectorAll('[data-level]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.level)===index)));
+  $('level-description').textContent=level.subtitle+' · Fresh squad';
+  $('start-button').firstChild.textContent='DEPLOY LEVEL '+(index+1)+' ';
+  document.querySelector('.brand small').textContent='LEVEL '+(index+1)+' · '+level.name;
+  document.querySelector('.location-stamp small').textContent=level.name+' · '+(index?'DUSK':'DAWN');
+  environment?.setLevel(index);
+}
 
 function error(message) {
   show('loading',false);show('menu',false);$('error-message').textContent=message;show('error-panel');
 }
 function updateSound(){ $('sound-button').classList.toggle('muted',!audio.enabled);$('sound-button').setAttribute('aria-label',audio.enabled?'Mute sound':'Enable sound'); }
 function clearInput(){keys.clear();pointer.active=false;pointer.dx=pointer.dz=0;show('joystick',false);}
-function openModal(id){modal=id;show(id);clearInput();$(id).querySelector('button:not(:disabled)')?.focus();}
+function modalButtons(id){return [...$(id).querySelectorAll('button:not(:disabled)')].filter(button=>button.getClientRects().length);}
+function openModal(id){modal=id;show(id);clearInput();modalButtons(id)[0]?.focus();}
 function closeModal(id){show(id,false);if(modal===id)modal=null;}
 function callout(text,duration=3.5){$('callout').textContent=text;calloutTime=duration;$('callout').classList.add('visible');}
-function start(){
-  audio.start().then(updateSound);sim.start();effects.reset();clearInput();
+function start(level=selectedLevel){
+  selectLevel(level);audio.start().then(updateSound);sim.start(level);effects.reset();clearInput();
   for(const id of ['menu','pause-panel','result-panel'])closeModal(id);
   show('hud');show('wave-hud');show('pause-button');bannerTime=0;calloutTime=0;shake=0;flash=0;
   $('banner').classList.remove('visible');$('callout').classList.remove('visible');
@@ -42,22 +54,25 @@ function processEvents(){
   for(const e of sim.drainEvents()){
     effects.handle(e);audio.handle(e);
     if(e.type==='wave'){
-      $('banner-kicker').textContent='WAVE '+String(e.index+1).padStart(2,'0')+' / 04';
+      $('banner-kicker').textContent='LEVEL '+(sim.level+1)+' · WAVE '+String(e.index+1).padStart(2,'0')+' / 04';
       $('banner-title').textContent=e.name;$('banner-description').textContent=e.description;
       $('banner').classList.add('visible');bannerTime=3.2;
     }
     if(e.type==='barrage')callout('ARTILLERY INBOUND',2);
-    if(e.type==='warning'||e.type==='regroup')callout(e.text);
+    if(e.type==='warning'||e.type==='regroup'||e.type==='supplyMissed')callout(e.text);
     if(e.type==='recruit')callout('+1 SOLDIER · '+sim.player.squad+' IN YOUR SQUAD',1.1);
     if(e.type==='weapon'){callout(e.name+' UNLOCKED — NEW WEAPONS EQUIPPED',3.3);shake=Math.max(shake,.12);}
     if(e.type==='hurt'){flash=.6;shake=Math.max(shake,.12);}
+    if(e.type==='casualty')callout('−'+e.amount+' SOLDIER'+(e.amount>1?'S':'')+' · RECRUIT REINFORCEMENTS',2);
     if(e.type==='explosion')shake=Math.max(shake,e.friendly?.18:.28);
     if(e.type==='death'&&e.boss)shake=.65;
     if(e.type==='victory'||e.type==='defeat'){
       const won=e.type==='victory';
-      $('result-kicker').textContent=won?'MISSION COMPLETE':'SQUAD OVERRUN';
-      $('result-title').textContent=won?'The crossing holds.':'A stand worth remembering.';
-      $('result-description').textContent=won?'The Crimson Warden has fallen. You recruited '+sim.recruited+' soldiers and reached '+WEAPONS[sim.player.weaponLevel-1].name+'.':'The Legion broke through. Shoot +1 targets on the left, unlock stronger guns on the right, and return to the center before enemies get close.';
+      $('result-kicker').textContent=won?'LEVEL '+(sim.level+1)+' COMPLETE':'SQUAD OVERRUN';
+      $('result-title').textContent=won?(sim.level?'The gate is yours.':'The crossing holds.'):'A stand worth remembering.';
+      $('result-description').textContent=won?sim.levelData.bossName+' has fallen. '+sim.recruited+' recruited · '+sim.casualties+' lost · '+WEAPONS[sim.player.weaponLevel-1].name+'.':'The Legion broke through. Catch +1 bursts on the left and finish moving weapon goals before they pass. Return to the center before enemies get close.';
+      show('next-level-button',won&&sim.level<LEVELS.length-1);
+      if(won){try{localStorage.setItem('war-survival-level-'+(sim.level+1),'complete');}catch{}updateCompletions();}
       $('result-kills').textContent=sim.kills;
       $('result-time').textContent=Math.floor(sim.time/60)+':'+String(Math.floor(sim.time%60)).padStart(2,'0');
       $('result-health').textContent=Math.ceil(sim.player.health);
@@ -74,12 +89,15 @@ function updateHud(){
     button.classList.toggle('active',button.dataset.lane===sim.focus);
     button.setAttribute('aria-pressed',String(button.dataset.lane===sim.focus));
   });
-  document.querySelector('[data-lane="recruits"] small').textContent=p.squad>=MAX_SQUAD?'SQUAD FULL · '+MAX_SQUAD:'SHOOT LEFT';
-  document.querySelector('[data-lane="weapons"] small').textContent=sim.armory?'SHOOT RIGHT':'FULLY UPGRADED';
+  document.querySelector('[data-lane="recruits"] small').textContent=p.squad>=MAX_SQUAD?'SQUAD FULL · '+MAX_SQUAD:sim.recruits.length?'SHOOT LEFT':'NEXT BURST · '+Math.ceil(sim.recruitTimer)+'s';
+  document.querySelector('[data-lane="weapons"] small').textContent=sim.armory?'SHOOT RIGHT':p.weaponLevel===WEAPONS.length?'FULLY UPGRADED':'INBOUND · '+Math.ceil(sim.weaponTimer)+'s';
   const target=sim.armory;
-  $('next-weapon').textContent=target?WEAPONS[target.level-1].name:'MAX FIREPOWER';
-  $('weapon-remaining').textContent=target?Math.ceil(target.hp).toLocaleString()+' damage to unlock':'ALL WEAPONS EQUIPPED';
-  $('weapon-progress').style.width=(target?(1-target.hp/target.maxHp)*100:100)+'%';
+  $('next-weapon').textContent=WEAPONS[p.weaponLevel]?.name||'MAX FIREPOWER';
+  $('weapon-remaining').textContent=target?Math.ceil(target.hp).toLocaleString()+' damage to unlock':p.weaponLevel===WEAPONS.length?'ALL WEAPONS EQUIPPED':'Next goal approaching';
+  const remaining=target?(SUPPLY_EXIT-target.z)/sim.levelData.weaponSpeed:0;
+  $('weapon-deadline').textContent=target?'PASSES IN '+Math.ceil(remaining)+'s':p.weaponLevel===WEAPONS.length?'': 'ARRIVES IN '+Math.ceil(sim.weaponTimer)+'s';
+  $('weapon-deadline').classList.toggle('urgent',!!target&&remaining<=5);
+  $('weapon-progress').style.width=(target?(1-target.hp/target.maxHp)*100:p.weaponLevel===WEAPONS.length?100:0)+'%';
   $('kill-count').textContent=sim.kills;
   $('enemies-left').textContent=sim.enemies.length?sim.enemies.length+' enemies incoming':'Crossing secured';
   $('wave-label').innerHTML='WAVE '+String(sim.wave+1).padStart(2,'0')+' <span>/ 04</span>';
@@ -89,7 +107,7 @@ function updateHud(){
   $('barrage-status').textContent=ready?'BARRAGE READY':'RELOADING · '+Math.ceil(sim.barrageCooldown)+'s';
   $('barrage-fill').style.width=(1-sim.barrageCooldown/BARRAGE_COOLDOWN)*100+'%';
   const boss=sim.enemies.find(e=>e.type==='boss');show('boss-hud',!!boss&&sim.state!=='menu');
-  if(boss)$('boss-fill').style.width=(boss.hp/boss.maxHp)*100+'%';
+  if(boss){$('boss-fill').style.width=(boss.hp/boss.maxHp)*100+'%';document.querySelector('#boss-hud>span').textContent=sim.levelData.bossName;}
 }
 function resize(){
   const portrait=innerWidth/innerHeight<.8;
@@ -140,7 +158,7 @@ async function boot(){
     $('viewport').append(renderer.domElement);
     renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();if(sim.state==='active')sim.pause();error('The graphics connection was interrupted. Reload to return to Ashen Crossing.');});
     scene=new T.Scene();camera=new T.PerspectiveCamera(49,innerWidth/innerHeight,.3,450);camera.position.set(-9,25,38);
-    environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);targets=createTargets(scene);resize();updateSound();
+    environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);targets=createTargets(scene);resize();updateSound();selectLevel(selectedLevel);updateCompletions();
     armies.update(sim,0);effects.update(sim,0,0);environment.update(0);targets.update(sim,0);
     await renderer.compileAsync(scene,camera);
     show('loading',false);show('menu');requestAnimationFrame(t=>{previousTime=t;frame(t);});
@@ -151,13 +169,27 @@ async function boot(){
         place:(x,z)=>{sim.player.x=clamp(x,LIMITS.minX,LIMITS.maxX);sim.player.z=clamp(z,LIMITS.minZ,LIMITS.maxZ);},
         wave:index=>{sim.beginWave(clamp(index,0,3));processEvents();},
         damage:amount=>{sim.hurt(amount);},
+        targets:()=>targets.snapshot(),
         clear:()=>{for(const e of sim.enemies)sim.damage(e,e.hp+1,false);},
         renderer:()=>({...metrics,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures}),
       };
     }
   }catch(e){console.error(e);error('The 3D battlefield could not load. Use a current browser with hardware acceleration and WebGL 2 enabled. Local play requires the included web server.');}
 }
-$('start-button').addEventListener('click',start);$('replay-button').addEventListener('click',start);$('restart-button').addEventListener('click',start);
+$('start-button').addEventListener('click',()=>start());$('replay-button').addEventListener('click',()=>start());$('restart-button').addEventListener('click',()=>start());
+$('next-level-button').addEventListener('click',()=>start(sim.level+1));
+function updateCompletions(){
+  for(const button of document.querySelectorAll('[data-level]')){
+    let complete=false;try{complete=localStorage.getItem('war-survival-level-'+(Number(button.dataset.level)+1))==='complete';}catch{}
+    button.querySelector('small').textContent=complete?'COMPLETED ✓':LEVELS[Number(button.dataset.level)].difficulty;
+  }
+}
+document.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>selectLevel(Number(button.dataset.level))));
+document.querySelectorAll('[data-menu]').forEach(button=>button.addEventListener('click',()=>{
+  sim.reset(selectedLevel);sim.preview();effects.reset();clearInput();
+  closeModal('pause-panel');closeModal('result-panel');show('hud',false);show('wave-hud',false);show('pause-button',false);show('menu');
+  $('start-button').focus();
+}));
 $('sound-button').addEventListener('click',()=>{audio.toggle();audio.start().then(updateSound);updateSound();});
 $('pause-button').addEventListener('click',togglePause);$('resume-button').addEventListener('click',togglePause);
 $('barrage-button').addEventListener('click',()=>{sim.barrage();renderer.domElement.focus();});
@@ -171,7 +203,7 @@ addEventListener('resize',()=>{if(renderer)resize();});
 addEventListener('keydown',event=>{
   if(event.code==='Escape'&&!event.repeat){if(sim.state==='active'||sim.state==='paused')togglePause();return;}
   if(modal&&event.code==='Tab'){
-    const buttons=[...$(modal).querySelectorAll('button:not(:disabled)')],first=buttons[0],last=buttons.at(-1);
+    const buttons=modalButtons(modal),first=buttons[0],last=buttons.at(-1);
     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
     else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
   }
