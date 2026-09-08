@@ -24,9 +24,14 @@ export const BOSS_TYPES = {
   furnace:{name:'FURNACE COLOSSUS',color:0x382b31,accent:0xff5d26,shape:'tank',attack:'salvo'},
   mycelium:{name:'SPORE EMPRESS',color:0x526178,accent:0xdca3ff,shape:'crawler',attack:'summon'},
   sovereign:{name:'ECLIPSE SOVEREIGN',color:0x4c3e69,accent:0xffebb0,shape:'oracle',attack:'summon'},
+  leviathan:{name:'CORAL LEVIATHAN',color:0x296e8b,accent:0xff93c9,shape:'crawler',attack:'cross'},
+  clockwork:{name:'BRASS TIMEKEEPER',color:0x71613c,accent:0x97ffda,shape:'tank',attack:'sweep'},
+  lotus:{name:'LOTUS MATRIARCH',color:0x665477,accent:0xffb8d9,shape:'oracle',attack:'summon'},
+  prismatic:{name:'PRISM TITAN',color:0x537a9a,accent:0xc0a8ff,shape:'crystal',attack:'cross'},
+  dragon:{name:'ASTRAL WYRM',color:0x473d75,accent:0xffcb7a,shape:'dragon',attack:'summon'},
 };
 
-// Ten palettes plus structural landmarks. Values are deliberately data, not level checks.
+// Palettes and structural landmarks shared across rendering and the campaign menu.
 export const WORLDS = [
   {name:'ASHEN CROSSING',biome:'jungle',sky:'#608e9c',horizon:'#f5ddb1',fog:'#b9c6b6',sun:'#ffd6a0',stone:'#c0bca8',leaf:'#93ac69',water:'#367b78',accent:'#e9c883',weather:'pollen',landmark:'falls',description:'Sunlit gorge · Waterfalls and circling swifts',boss:'warden'},
   {name:'EMBER GATE',biome:'ember',sky:'#384b6b',horizon:'#e8a878',fog:'#837983',sun:'#ffa05b',stone:'#b5a59b',leaf:'#8b8e62',water:'#435776',accent:'#ff9555',weather:'embers',landmark:'beacons',description:'Smoldering ruins · Lanterns at dusk',boss:'marshal'},
@@ -38,6 +43,11 @@ export const WORLDS = [
   {name:'CINDER CALDERA',biome:'volcano',sky:'#352e44',horizon:'#e38354',fog:'#916d68',sun:'#ff9c68',stone:'#827779',leaf:'#716864',water:'#c94d22',accent:'#ff762f',weather:'embers',landmark:'volcano',description:'Basalt causeway · Lava rivers and a living volcano',boss:'furnace'},
   {name:'LUMEN WILDS',biome:'luminous',sky:'#152448',horizon:'#59739a',fog:'#597a91',sun:'#b8d9f0',stone:'#99b7bf',leaf:'#64c1c3',water:'#367d91',accent:'#d1a7ff',weather:'fireflies',landmark:'mushrooms',description:'Moonlit forest · Giant glowing mushrooms and fireflies',boss:'mycelium'},
   {name:'THE SKY CITADEL',biome:'celestial',sky:'#324b86',horizon:'#f5d6bd',fog:'#b4bacd',sun:'#ffe8c6',stone:'#e0d5c5',leaf:'#a1b7d2',water:'#7b9cc1',accent:'#ffe9b0',weather:'stars',landmark:'islands',description:'Above the clouds · Floating islands and an eclipse gate',boss:'sovereign'},
+  {name:'CORAL CATHEDRAL',biome:'coral',sky:'#143b62',horizon:'#68cfce',fog:'#568ea0',sun:'#b1f5ed',stone:'#9fbec6',leaf:'#ff92bd',water:'#167a98',accent:'#ffacd7',weather:'bubbles',landmark:'reef',description:'Tidal dream · Breathing jellyfish and branching coral',boss:'leviathan'},
+  {name:'CLOCKWORK GARDENS',biome:'clockwork',sky:'#315459',horizon:'#edcc9c',fog:'#abb3a0',sun:'#ffdda8',stone:'#baa887',leaf:'#88c49d',water:'#3d8d82',accent:'#a5ffda',weather:'pollen',landmark:'gears',description:'Overgrown machines · Turning gears and luminous butterflies',boss:'clockwork'},
+  {name:'MOONLOTUS MARSH',biome:'lotus',sky:'#24274e',horizon:'#877aaa',fog:'#817a9c',sun:'#decafa',stone:'#b4adc8',leaf:'#6baea7',water:'#485d89',accent:'#ffb5dc',weather:'fireflies',landmark:'lotus',description:'Midnight water garden · Unfurling lilies and dancing wisps',boss:'lotus'},
+  {name:'PRISMATIC RIFT',biome:'prismatic',sky:'#33336d',horizon:'#bfaddc',fog:'#9996c1',sun:'#e8dcff',stone:'#b5b6d1',leaf:'#a5c8eb',water:'#6169a9',accent:'#a6f6ff',weather:'stars',landmark:'prisms',description:'Shattered gravity · Orbiting crystals and ribbons of light',boss:'prismatic'},
+  {name:'DRAGON OBSERVATORY',biome:'astral',sky:'#171f46',horizon:'#9e83ae',fog:'#747eae',sun:'#ffe1ba',stone:'#b6b7c9',leaf:'#95aadb',water:'#445d8a',accent:'#ffda91',weather:'stars',landmark:'orrery',description:'Edge of the stars · A living dragon and a celestial orrery',boss:'dragon'},
 ];
 
 export const ROUTES = [
@@ -46,4 +56,15 @@ export const ROUTES = [
   ['rifle','repeater','flame','sun'],['rifle','frost','arc','rail'],
   ['rifle','repeater','flame','rockets'],['rifle','frost','arc','sun'],
   ['rifle','frost','flame','rail'],['rifle','repeater','arc','sun'],
+  ['rifle','frost','arc','rockets'],['rifle','repeater','flame','rail'],
+  ['rifle','frost','flame','sun'],['rifle','frost','arc','rail'],['rifle','repeater','arc','sun'],
+];
+
+export const OPENINGS = [
+  {id:'classic',name:'FIRST STAND'},
+  {id:'convoy',name:'VETERAN CONVOY'},
+  {id:'rift',name:'RIFT ARRIVAL'},
+  {id:'supply',name:'OVERDRIVE DROP'},
+  {id:'armory',name:'ARMORY RUSH'},
+  {id:'duel',name:'POWER DUEL'},
 ];

@@ -1,9 +1,18 @@
-import { POWERS, POWER_DECK } from '../../data/powers.js?v=0.5.0';
-import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.5.0';
+import { POWERS, POWER_DECK } from '../../data/powers.js?v=0.6.0';
+import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.6.0';
 
-export function openChoice(sim) {
-  const right=POWER_DECK[(sim.choiceCount+sim.level)%POWER_DECK.length];
-  const kinds=[sim.player.squad<MAX_SQUAD?'reinforce':'aegis',right];
+export function nextPower(sim) {
+  if(!sim.powerBag.length){
+    sim.powerBag=[...POWER_DECK];
+    for(let i=sim.powerBag.length-1;i>0;i--){const j=Math.floor(sim.rewardRandom()*(i+1));[sim.powerBag[i],sim.powerBag[j]]=[sim.powerBag[j],sim.powerBag[i]];}
+    if(sim.powerBag.at(-1)===sim.lastOfferedPower)[sim.powerBag[0],sim.powerBag[sim.powerBag.length-1]]=[sim.powerBag.at(-1),sim.powerBag[0]];
+  }
+  return sim.lastOfferedPower=sim.powerBag.pop();
+}
+
+export function openChoice(sim,duel=false) {
+  const right=nextPower(sim);
+  const kinds=[duel?nextPower(sim):sim.player.squad<MAX_SQUAD?'reinforce':'aegis',right];
   sim.choiceCount++;
   sim.choice={id:sim.nextId++,age:0,z:-8,speed:2.4,options:kinds.map((kind,i)=>({
     id:sim.nextId++,type:'choice',kind,side:i?'weapons':'recruits',x:i?5.55:-5.55,y:2.4,z:-8,
@@ -58,6 +67,11 @@ export function resolveChoice(sim,option) {
 export function activatePower(sim,kind) {
   const spec=POWERS[kind];if(!spec?.duration)return;
   sim.buffs[kind]=spec.duration;sim.powerTimers[kind]=.15;
+  if(kind==='gravity'){
+    const front=sim.enemies.filter(e=>e.hp>0).sort((a,b)=>b.z-a.z)[0];
+    sim.gravityWell={x:0,z:Math.min(sim.player.z-6,(front?.z??sim.player.z-15)-1),age:0,pulse:0};
+  }
+  if(kind==='phoenix'){sim.player.health=Math.min(100,sim.player.health+12);sim.phoenixFlight=null;}
   sim.powersTaken++;
   sim.events.push({type:'powerup',kind,x:sim.player.x,z:sim.player.z,text:spec.name+' · '+spec.detail});
 }
@@ -68,6 +82,7 @@ export function fling(enemy,x,z,strength=1) {
 }
 
 export function updatePowers(sim,dt) {
+  updateMythicPowers(sim,dt);
   for(const kind of ['starfall','tesla']){
     if(sim.buffs[kind]<=0)continue;
     sim.powerTimers[kind]-=dt;if(sim.powerTimers[kind]>0)continue;
@@ -91,4 +106,45 @@ export function updatePowers(sim,dt) {
       }
     }
   }
+}
+
+function updateMythicPowers(sim,dt){
+  const well=sim.gravityWell;
+  if(well){
+    well.age+=dt;well.pulse-=dt;
+    if(sim.buffs.gravity<=0){
+      sim.zones.push({id:sim.nextId++,x:well.x,z:well.z,radius:8,remaining:.01,total:.01,friendly:true,damage:700+sim.level*25,power:'gravity'});
+      sim.gravityWell=null;
+    }else{
+      for(const enemy of sim.enemies){
+        if(enemy.hp<=0)continue;const dx=well.x-enemy.x,dz=well.z-enemy.z,d=Math.hypot(dx,dz);
+        if(d>11)continue;
+        if(enemy.type!=='boss'){const pull=Math.min(1,dt*2.8);enemy.x+=dx*pull;enemy.z+=dz*pull;}
+        if(well.pulse<=0)sim.damage(enemy,enemy.type==='boss'?130:105,false,true);
+      }
+      if(well.pulse<=0){well.pulse=.45;sim.events.push({type:'gravityPulse',x:well.x,z:well.z});}
+    }
+  }
+  if(sim.phoenixFlight){sim.phoenixFlight.age+=dt;if(sim.phoenixFlight.age>1.7)sim.phoenixFlight=null;}
+  if(sim.buffs.phoenix>0){
+    sim.powerTimers.phoenix-=dt;
+    if(sim.powerTimers.phoenix<=0){
+      const targets=sim.enemies.filter(e=>e.hp>0&&e.z<sim.player.z+4).sort((a,b)=>b.z-a.z);
+      if(targets.length){
+        sim.powerTimers.phoenix=2.3;const z=targets[0].z;
+        sim.phoenixFlight={x:0,z,fromZ:sim.player.z+2,toZ:Math.max(sim.player.z-30,z-12),age:0};
+        for(let i=0;i<4;i++)sim.zones.push({id:sim.nextId++,x:0,z:z-i*4,radius:4.8,remaining:.35+i*.25,total:.35+i*.25,friendly:true,damage:260+sim.level*16,power:'phoenix'});
+        sim.events.push({type:'phoenixDive',x:0,z});
+      }
+    }
+  }
+}
+
+export function phoenixRescue(sim){
+  if(sim.buffs.phoenix<=0)return false;
+  sim.buffs.phoenix=0;sim.phoenixSaves++;sim.player.health=35;sim.hurtCooldown=1.5;
+  const amount=Math.min(6,MAX_SQUAD-sim.player.squad);sim.player.squad+=amount;sim.recruited+=amount;sim.knockups=[];
+  sim.events.push({type:'rebirth',x:sim.player.x,z:sim.player.z,text:'PHOENIX REBIRTH · YOUR SQUAD RISES AGAIN'});
+  sim.zones.push({id:sim.nextId++,x:sim.player.x,z:sim.player.z-3,radius:9,remaining:.01,total:.01,friendly:true,damage:850,power:'phoenix'});
+  return true;
 }

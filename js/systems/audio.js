@@ -54,6 +54,9 @@ export class BattlefieldAudio {
     if(e.type==='bossSwing'){this.noiseHit(.32,.25,3600);this.tone(92,.35,.18);}
     if(e.type==='bossImpact'){this.noiseHit(.65,.55,1800);this.tone(52,.7,.3);}
     if(e.type==='shieldBlock'){this.tone(760,.7,.12);this.tone(1140,.65,.08);}
+    if(e.type==='gravityPulse'){this.tone(86,.22,.055,'triangle');}
+    if(e.type==='phoenixDive'){this.tone(720,.5,.08);this.noiseHit(.4,.12,2600);}
+    if(e.type==='rebirth'){this.tone(330,1,.13);this.tone(660,1.2,.1);this.tone(1320,1.5,.075);}
     if(e.type==='powerBeam'&&now-(this.lastArc||0)>.12){this.lastArc=now;this.tone(e.color===0xeb9dff?940:1400,.1,.045,'triangle');}
     if(e.type==='warning')this.tone(380,.3,.075,'triangle');
     if(e.type==='victory'){this.tone(440,1.4,.14);this.tone(660,1.5,.1);this.tone(880,1.3,.05);}

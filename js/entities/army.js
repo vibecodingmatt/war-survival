@@ -1,9 +1,9 @@
 import * as T from '../../vendor/three.module.min.js';
-import { formation } from '../core/math.js?v=0.5.0';
-import { MAX_SQUAD } from '../../data/waves.js?v=0.5.0';
-import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.5.0';
-import { createBosses } from './bosses.js?v=0.5.0';
-import { flightPose } from '../core/flight.js?v=0.5.0';
+import { formation } from '../core/math.js?v=0.6.0';
+import { MAX_SQUAD } from '../../data/waves.js?v=0.6.0';
+import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.6.0';
+import { createBosses } from './bosses.js?v=0.6.0';
+import { flightPose } from '../core/flight.js?v=0.6.0';
 
 const root = new T.Object3D(), limb = new T.Object3D(), partTransform = new T.Object3D();
 const world = new T.Matrix4(), joint = new T.Matrix4(), tint = new T.Color();

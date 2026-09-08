@@ -1,12 +1,13 @@
 import * as T from '../../vendor/three.module.min.js';
-import { createWaterfalls } from './waterfalls.js?v=0.5.0';
-import { createVolcano } from './volcano.js?v=0.5.0';
-import { WORLDS } from '../../data/campaign.js?v=0.5.0';
-import { randomSource } from '../core/math.js?v=0.5.0';
+import { createWaterfalls } from './waterfalls.js?v=0.6.0';
+import { createVolcano } from './volcano.js?v=0.6.0';
+import { WORLDS } from '../../data/campaign.js?v=0.6.0';
+import { randomSource } from '../core/math.js?v=0.6.0';
+import { createWonderland } from './wonderlands.js?v=0.6.0';
 
 // Rebuild only the selected biome. Shared batches keep the mobile draw count bounded.
 export function createAmbience(scene,surfaces){
-  let volcanoUpdate=null;
+  let volcanoUpdate=null,wonderland=null;
   let root=null,profile=WORLDS[0],level=-1,weather=null,origins=null,mist=[],floaters=[],timeUniform={value:0};
   const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d');
   const gradient=ctx.createRadialGradient(64,64,0,64,64,64);gradient.addColorStop(0,'#ffffff88');gradient.addColorStop(.45,'#ffffff44');gradient.addColorStop(1,'#ffffff00');ctx.fillStyle=gradient;ctx.fillRect(0,0,128,128);
@@ -14,7 +15,7 @@ export function createAmbience(scene,surfaces){
   function setLevel(index){
     if(index===level)return;level=index;profile=WORLDS[index];
     if(root){scene.remove(root);const geometries=new Set(),materials=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}
-    root=new T.Group();scene.add(root);mist=[];floaters=[];volcanoUpdate=null;
+    root=new T.Group();scene.add(root);mist=[];floaters=[];volcanoUpdate=null;wonderland=null;
     const random=randomSource(741+index*139),range=(a,b)=>a+random()*(b-a);
     const mats={
       stone:new T.MeshStandardMaterial({color:profile.stone,map:surfaces.color,normalMap:surfaces.normal,normalScale:new T.Vector2(.5,.5),roughness:.86,metalness:.12}),
@@ -93,6 +94,7 @@ export function createAmbience(scene,surfaces){
     for(const g of Object.values(geometries))if(!usedG.has(g))g.dispose();for(const m of Object.values(mats))if(!usedM.has(m))m.dispose();
     if(profile.landmark==='falls')createWaterfalls(root,surfaces,profile,wind,cloudMap);
     if(profile.landmark==='volcano')volcanoUpdate=createVolcano(root,surfaces,wind,cloudMap);
+    wonderland=createWonderland(root,profile,wind,cloudMap,surfaces);
     if(profile.biome==='ice'){
       const material=new T.ShaderMaterial({side:T.DoubleSide,transparent:true,depthWrite:false,blending:T.AdditiveBlending,uniforms:{time:wind},
         vertexShader:'varying vec2 v;uniform float time;void main(){v=uv;vec3 p=position;p.z+=sin(p.x*.035+time*.3)*8.;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}',
@@ -100,8 +102,9 @@ export function createAmbience(scene,surfaces){
       const aurora=new T.Mesh(new T.PlaneGeometry(220,32,40,8),material);aurora.position.set(0,12,-130);root.add(aurora);
     }
     for(let i=0;i<18;i++){
-      const fog=new T.Sprite(new T.SpriteMaterial({map:cloudMap,color:profile.fog,transparent:true,opacity:profile.biome==='celestial'?.6:.26,depthWrite:false}));
-      const x=(i%2?1:-1)*range(14,35),y=range(-23,-11),z=range(-90,30);fog.position.set(x,y,z);fog.scale.set(range(18,32),range(7,12),1);root.add(fog);mist.push({mesh:fog,x,y,z,phase:i});
+      const highCloud=['celestial','astral','prismatic'].includes(profile.biome);
+      const fog=new T.Sprite(new T.SpriteMaterial({map:cloudMap,color:profile.fog,transparent:true,opacity:highCloud?.6:.26,depthWrite:false}));
+      const x=(i%2?1:-1)*range(14,35),y=highCloud?range(-10,-3):range(-23,-11),z=range(-90,30);fog.position.set(x,y,z);fog.scale.set(range(18,32),range(7,12),1);root.add(fog);mist.push({mesh:fog,x,y,z,phase:i});
     }
     if(profile.landmark==='pagoda'||profile.landmark==='beacons')for(let i=0;i<14;i++){
       const lantern=new T.Mesh(new T.BoxGeometry(.55,.9,.55),new T.MeshBasicMaterial({color:profile.accent}));const x=(i%2?1:-1)*range(12,22),y=range(1,16),z=range(-70,20);root.add(lantern);floaters.push({mesh:lantern,x,y,z,phase:i});
@@ -113,7 +116,7 @@ export function createAmbience(scene,surfaces){
     weather=rain?new T.LineSegments(geometry,new T.LineBasicMaterial({color:0xbadcea,transparent:true,opacity:.24,depthWrite:false})):new T.Points(geometry,new T.PointsMaterial({color:profile.weather==='snow'?'#eefbff':profile.accent,size:['snow','petals','fireflies','stars'].includes(profile.weather)?.16:.07,map:cloudMap,transparent:true,opacity:.8,depthWrite:false,blending:['fireflies','stars','embers'].includes(profile.weather)?T.AdditiveBlending:T.NormalBlending}));root.add(weather);
   }
   return {setLevel,update(time,reduced=false){
-    if(!root)return;const t=reduced?time*.15:time;timeUniform.value=t;volcanoUpdate?.(t);
+    if(!root)return;const t=reduced?time*.15:time;timeUniform.value=t;volcanoUpdate?.(t);wonderland?.update(t);
     for(const f of mist){f.mesh.position.x=f.x+Math.sin(t*.11+f.phase)*3;f.mesh.position.y=f.y+Math.sin(t*.15+f.phase)*.5;}
     for(const f of floaters){f.mesh.position.set(f.x+Math.sin(t*.22+f.phase)*.8,f.y+Math.sin(t*.6+f.phase)*.8,f.z);f.mesh.rotation.y=t*.12+f.phase;}
     const p=weather.geometry.attributes.position.array,w=profile.weather,fall=['rain','storm','snow','petals','sand'].includes(w),speed=w==='storm'?17:w==='rain'?11:w==='snow'?1.2:2;
@@ -125,5 +128,5 @@ export function createAmbience(scene,surfaces){
       if(rain){p[j+3]=p[j]-.18;p[j+4]=p[j+1]+1.2;p[j+5]=p[j+2];}
     }
     weather.geometry.attributes.position.needsUpdate=true;
-  },snapshot:()=>({biome:profile.biome,landmark:profile.landmark,weather:profile.weather,level:level+1})};
+  },snapshot:()=>({biome:profile.biome,landmark:profile.landmark,weather:profile.weather,level:level+1,features:wonderland?.features||[],animationTime:timeUniform.value})};
 }

@@ -17,15 +17,15 @@ let browser;
  await page.keyboard.press('Escape');const time=(await page.evaluate(()=>window.__warTest.snapshot())).time;await page.waitForTimeout(200);assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).time,time);
  await page.locator('#restart-button').click();
  // UI progression uses accelerated wave clears; ordinary combat is covered by campaign.cjs.
- for(let level=1;level<=10;level++){
+ for(let level=1;level<=15;level++){
    assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).level,level);
-   for(let wave=0;wave<4;wave++)await page.evaluate(()=>{window.__warTest.clear();window.__warTest.step(3.1);});
+   for(let wave=0;wave<4;wave++)await page.evaluate(()=>{window.__warTest.clear();const initial=window.__warTest.snapshot().wave;for(let i=0;i<160;i++){window.__warTest.step(.2);const s=window.__warTest.snapshot();if(s.wave!==initial||s.state!=='active')break;}});
    assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).state,'victory');
-   assert.equal(await page.locator('[data-level]:not(:disabled)').count(),Math.min(level+1,10));
+   assert.equal(await page.locator('[data-level]:not(:disabled)').count(),Math.min(level+1,15));
    if(level===1){await page.reload();await page.waitForFunction(()=>window.__warTest?.ready);assert.equal(await page.locator('[data-level]:not(:disabled)').count(),2);assert.equal(await page.locator('[data-level="1"]').getAttribute('aria-pressed'),'true');await page.locator('#start-button').click();continue;}
-   if(level<10){await page.locator('#next-level-button').click();assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).squad,9);}
+   if(level<15){await page.locator('#next-level-button').click();assert.equal((await page.evaluate(()=>window.__warTest.snapshot())).squad,9);}
    else {assert.equal(await page.locator('#next-level-button').isVisible(),false);assert.match(await page.locator('#result-title').textContent(),/Borderlands/);}
  }
- await page.locator('#result-panel [data-menu]').click();assert.match(await page.locator('#campaign-progress').textContent(),/10 \/ 10/);
- assert.deepEqual(errors,[]);console.log('PASS: desktop keyboard/mouse controls, pause, artillery, all nine Next Level transitions, fresh starts and final campaign result.');await browser.close();
+ await page.locator('#result-panel [data-menu]').click();assert.match(await page.locator('#campaign-progress').textContent(),/15 \/ 15/);
+ assert.deepEqual(errors,[]);console.log('PASS: desktop keyboard/mouse controls, pause, artillery, all fourteen Next Level transitions, fresh starts and final campaign result.');await browser.close();
 })().catch(async e=>{console.error(e);await browser?.close();process.exitCode=1;});

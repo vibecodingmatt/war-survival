@@ -1,4 +1,4 @@
-import { WORLDS, ROUTES, WEAPON_LIBRARY, BOSS_TYPES } from './campaign.js?v=0.5.0';
+import { WORLDS, ROUTES, WEAPON_LIBRARY, BOSS_TYPES, OPENINGS } from './campaign.js?v=0.6.0';
 export const WAVES = [
   { name: 'THE VANGUARD', description: 'Left: +1 soldiers. Center: enemies. Right: stronger guns.', count: 80, hp: 62, speed: 1.8, brutes: 0, grenadiers: 0 },
   { name: 'RED TIDE', description: 'The ranks are growing. Your squad must grow faster.', count: 136, hp: 120, speed: 1.95, brutes: 3, grenadiers: 1 },
@@ -37,9 +37,9 @@ export const LIMITS = { minX: -4.2, maxX: 4.2, minZ: 3, maxZ: 16 };
 export const LANE_THRESHOLD = 2.05;
 export const SUPPLY_EXIT = 20;
 
-for(let i=2;i<10;i++){
+for(let i=2;i<WORLDS.length;i++){
   const world=WORLDS[i],boss=BOSS_TYPES[world.boss];
-  LEVELS.push({name:world.name,subtitle:world.description,difficulty:['','','RISING TIDE','COLD FRONT','BURNING SANDS','EYE OF THE STORM','FALLING LEAVES','INFERNO','AFTER DARK','FINAL STAND'][i],
+  LEVELS.push({name:world.name,subtitle:world.description,difficulty:['','','RISING TIDE','COLD FRONT','BURNING SANDS','EYE OF THE STORM','FALLING LEAVES','INFERNO','AFTER DARK','SKYWARD','DEEP TIDE','AGAINST TIME','MOONRISE','SHATTERED SKY','LAST HORIZON'][i],
     bossName:boss.name,bossHp:23500+i*4000,recruitInterval:10,recruitSpeed:2.9+i*.06,recruitBatch:6,
     weaponSpeed:2.1+i*.045,weaponInterval:4,impactFuse:Math.max(1.4,1.85-i*.045),impactCount:3,impactDamage:Math.round(16+i*.35),
     waves:[
@@ -51,5 +51,12 @@ for(let i=2;i<10;i++){
 }
 for(let i=0;i<LEVELS.length;i++){
   LEVELS[i].world=WORLDS[i];LEVELS[i].weapons=ROUTES[i].map(id=>WEAPON_LIBRARY[id]);
+  LEVELS[i].opening=OPENINGS[i===0?0:1+(i-1)%5];
+  // Beyond the original finale, grow durability more gently: army size and
+  // permanent weapon strength have already reached their caps.
+  if(i>=10){
+    LEVELS[i].bossHp=LEVELS[9].bossHp+(i-9)*2500;
+    LEVELS[i].waves.forEach((wave,w)=>{const base=LEVELS[9].waves[w];wave.hp=Math.round(base.hp+(wave.hp-base.hp)*.55);});
+  }
   LEVELS[i].waves.forEach(w=>{if(w.boss&&!w.bossType)w.bossType=WORLDS[i].boss;});
 }

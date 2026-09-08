@@ -1,9 +1,11 @@
 import * as T from '../../vendor/three.module.min.js';
-import { flightPose } from '../core/flight.js?v=0.5.0';
-import { POWERS } from '../../data/powers.js?v=0.5.0';
+import { flightPose } from '../core/flight.js?v=0.6.0';
+import { POWERS } from '../../data/powers.js?v=0.6.0';
+import { createMythicEffects } from './mythic-effects.js?v=0.6.0';
 
 // Persistent pools: a full screen of chain lightning still costs two draw calls.
 export function createSpectacle(scene) {
+  const mythic=createMythicEffects(scene);
   const d=new T.Object3D(),up=new T.Vector3(0,1,0),dir=new T.Vector3(),color=new T.Color();
   const arcs=[],pulses=[],debris=[];
   const lines=new T.InstancedMesh(new T.CylinderGeometry(1,1,1,5),new T.MeshBasicMaterial({color:0xffffff,toneMapped:false}),900);
@@ -52,13 +54,18 @@ export function createSpectacle(scene) {
       if(e.type==='bossImpact'){pulse(e.x,e.z,6,0x83d9ff,.8);scatter(e.x,e.z,0xc7e9ff,32);}
       if(e.type==='shieldBlock'){pulse(e.x,e.z,6.5,0xa5dfff,1);scatter(e.x,e.z,0x8eeaff,40);}
       if(e.type==='explosion'&&e.power==='starfall'){pulse(e.x,e.z,e.radius*1.5,0xffa465,.8);pulse(e.x,e.z,e.radius,0xe59bff,1.1);scatter(e.x,e.z,0xffd381,26);}
+      if(e.type==='gravityPulse')pulse(e.x,e.z,6,0x9a86ff,.45,'collapse');
+      if(e.type==='explosion'&&e.power==='gravity'){pulse(e.x,e.z,12,0xbdaaff,1.2);scatter(e.x,e.z,0xc7c8ff,50);}
+      if(e.type==='explosion'&&e.power==='phoenix'){pulse(e.x,e.z,6,0xffc97e,.7);scatter(e.x,e.z,0xffad68,22);}
+      if(e.type==='rebirth'){pulse(e.x,e.z,10,0xffdc98,1.5);scatter(e.x,e.z,0xffdca3,70);}
       if(e.type==='choiceTaken'){pulse(e.x,e.z,4,POWERS[e.kind].color,.9);pulse(e.rejectedX,e.z,3,0xb592dc,.7,'collapse');scatter(e.x,e.z,POWERS[e.kind].color,22);}
       if(e.type==='powerup'){const hex=POWERS[e.kind]?.color||0x9de9cf;pulse(e.x,e.z,6,hex,1.2);scatter(e.x,e.z,hex,36);}
       if(e.type==='death'&&e.boss){pulse(e.x,e.z,15,0xffd19a,1.5);pulse(e.x,e.z,10,0xb5eaff,1);scatter(e.x,e.z,0xf7c686,50);}
     },
-    reset(){arcs.length=debris.length=0;for(const p of pulses)p.mesh.visible=false;pulses.length=0;lines.count=glowLines.count=shards.count=meteors.count=0;shield.visible=droneRoot.visible=prismRoot.visible=false;},
+    reset(){mythic.reset();arcs.length=debris.length=0;for(const p of pulses)p.mesh.visible=false;pulses.length=0;lines.count=glowLines.count=shards.count=meteors.count=0;shield.visible=droneRoot.visible=prismRoot.visible=false;},
     update(sim,dt,time,reduced=false){
       lineCount=0;
+      mythic.update(sim,time,segment);
       for(let i=arcs.length-1;i>=0;i--){const a=arcs[i];a.life-=dt;if(a.life<=0){arcs.splice(i,1);continue;}
         let previous={x:a.x,y:a.y,z:a.z};
         for(let j=1;j<=6;j++){const t=j/6,bend=j===6?0:Math.sin(j*19+a.tx*7)*.35;const next={x:a.x+(a.tx-a.x)*t+bend,y:a.y+(a.ty-a.y)*t+Math.abs(bend),z:a.z+(a.tz-a.z)*t};segment(previous,next,.035,a.color,a.life*4+.25);previous=next;}
@@ -89,6 +96,6 @@ export function createSpectacle(scene) {
       prisms.forEach((prism,i)=>{const a=sim.time*1.3+i*Math.PI/2;prism.position.set(p.x+Math.cos(a)*3,2+Math.sin(a*2)*.5,p.z+Math.sin(a)*2.5);prism.rotation.set(a,0,a*.5);});
       lines.count=glowLines.count=lineCount;for(const mesh of [lines,glowLines]){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
     },
-    snapshot:()=>({arcs:arcs.length,shards:shards.count,meteors:meteors.count,segments:lines.count,shield:shield.visible,drones:droneRoot.visible,prism:prismRoot.visible}),
+    snapshot:()=>({arcs:arcs.length,shards:shards.count,meteors:meteors.count,segments:lines.count,shield:shield.visible,drones:droneRoot.visible,prism:prismRoot.visible,...mythic.snapshot()}),
   };
 }

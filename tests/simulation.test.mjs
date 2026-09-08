@@ -119,8 +119,8 @@ test('unupgraded play loses even with artillery; blended play can win across see
   }
 });
 
-test('ten sectors increase enemy pressure and use complete, distinct equipment routes',()=>{
-  assert.equal(LEVELS.length,10);assert.equal(new Set(LEVELS.map(l=>l.world.biome)).size,10);
+test('fifteen sectors increase enemy pressure and use complete, distinct equipment routes',()=>{
+  assert.equal(LEVELS.length,15);assert.equal(new Set(LEVELS.map(l=>l.world.biome)).size,15);
   const guns=new Set();
   LEVELS.forEach((level,i)=>{
     assert.equal(level.weapons.length,4);level.weapons.forEach(w=>guns.add(w.id));

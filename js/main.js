@@ -1,19 +1,21 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js?v=0.5.0';
-import { createEnvironment } from './world/environment.js?v=0.5.0';
-import { createArmies } from './entities/army.js?v=0.5.0';
-import { createTargets } from './world/targets.js?v=0.5.0';
-import { createEffects } from './systems/effects.js?v=0.5.0';
-import { BattlefieldAudio } from './systems/audio.js?v=0.5.0';
-import { BARRAGE_COOLDOWN, LIMITS, LEVELS } from '../data/waves.js?v=0.5.0';
-import { clamp } from './core/math.js?v=0.5.0';
-import { BOSS_TYPES } from '../data/campaign.js?v=0.5.0';
-import { createProgress } from './core/progress.js?v=0.5.0';
-import { POWERS } from '../data/powers.js?v=0.5.0';
+import { Simulation } from './core/simulation.js?v=0.6.0';
+import { createEnvironment } from './world/environment.js?v=0.6.0';
+import { createArmies } from './entities/army.js?v=0.6.0';
+import { createTargets } from './world/targets.js?v=0.6.0';
+import { createEffects } from './systems/effects.js?v=0.6.0';
+import { BattlefieldAudio } from './systems/audio.js?v=0.6.0';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS } from '../data/waves.js?v=0.6.0';
+import { clamp } from './core/math.js?v=0.6.0';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.6.0';
+import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.6.0';
+import { POWERS } from '../data/powers.js?v=0.6.0';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
 const audio=new BattlefieldAudio(),sim=new Simulation();
+const testMode=new URLSearchParams(location.search).get('test')==='1';
+const testSeed=Number(new URLSearchParams(location.search).get('seed'))||731;
 let renderer,scene,camera,environment,armies,effects,targets;
 const coarsePointer=matchMedia('(pointer: coarse)');
 let touchMode=coarsePointer.matches,quality=touchMode?'balanced':'high',qualityManual=false;
@@ -54,7 +56,7 @@ function selectLevel(index){
   selectedLevel=index;
   const level=LEVELS[index];
   document.querySelectorAll('[data-level]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.level)===index)));
-  $('level-description').textContent=level.world.description+' · '+level.weapons.slice(1).map(w=>w.name).join(' → ');
+  $('level-description').textContent=level.opening.name+' · '+level.world.description+' · '+level.weapons.slice(1).map(w=>w.name).join(' → ');
   $('start-button').firstChild.textContent='DEPLOY LEVEL '+(index+1)+' ';
   document.querySelector('.brand small').textContent='LEVEL '+(index+1)+' · '+level.name;
   document.querySelector('.location-stamp small').textContent=level.world.description;
@@ -77,7 +79,7 @@ function closeModal(id){show(id,false);if(modal===id)modal=null;}
 function callout(text,duration=3.5){$('callout').textContent=text;calloutTime=duration;$('callout').classList.add('visible');}
 function start(level=selectedLevel){
   if(!progress.allowed(level))return;
-  selectLevel(level);audio.start().then(updateSound);sim.start(level);effects.reset();clearInput();
+  selectLevel(level);audio.start().then(updateSound);sim.seed=testMode?testSeed:crypto.getRandomValues(new Uint32Array(1))[0];sim.start(level);effects.reset();clearInput();
   for(const id of ['menu','pause-panel','result-panel'])closeModal(id);
   show('hud');show('wave-hud');show('pause-button');bannerTime=0;calloutTime=0;shake=0;flash=0;
   $('banner').classList.remove('visible');$('callout').classList.remove('visible');
@@ -103,6 +105,7 @@ function processEvents(){
     if(e.type==='hurt'){flash=.6;shake=Math.max(shake,.12);}
     if(e.type==='bossImpact'){shake=Math.max(shake,.7);callout(e.amount+' SOLDIERS LAUNCHED · '+e.lost+' LOST',2.5);}
     if(e.type==='shieldBlock'){shake=Math.max(shake,.2);callout('AEGIS HELD · SQUAD PROTECTED',2);}
+    if(e.type==='rebirth'){shake=Math.max(shake,.4);callout(e.text,3.5);}
     if(e.type==='choiceTaken'||e.type==='choiceMissed')callout(e.text,2.6);
     if(e.type==='casualty')callout('−'+e.amount+' SOLDIER'+(e.amount>1?'S':'')+' · RECRUIT REINFORCEMENTS',2);
     if(e.type==='explosion')shake=Math.max(shake,e.friendly?.18:.28);
@@ -111,12 +114,12 @@ function processEvents(){
       const won=e.type==='victory';
       if(won){progress.beat(sim.level);updateCompletions();}
       $('result-kicker').textContent=won?'LEVEL '+(sim.level+1)+' COMPLETE':'SQUAD OVERRUN';
-      $('result-title').textContent=won?(sim.level===9&&progress.mask===1023?'The Borderlands are yours.':sim.level?'Sector secured.':'The crossing holds.'):'A stand worth remembering.';
+      $('result-title').textContent=won?(sim.level===LEVELS.length-1&&progress.mask===COMPLETE_MASK?'The Borderlands are yours.':sim.level?'Sector secured.':'The crossing holds.'):'A stand worth remembering.';
       $('result-description').textContent=won?sim.levelData.bossName+' has fallen. '+sim.recruited+' recruited · '+sim.casualties+' lost · '+sim.powersTaken+' rift powers unleashed.':'The Legion broke through. Grow your squad, catch stronger guns, and choose rift powers between assaults. Keep the whole squad clear of a guardian’s swing.';
       const next=progress.allowed(sim.level+1)?sim.level+1:progress.next;
       $('next-level-button').dataset.next=next;
       $('next-level-button').firstChild.textContent='NEXT · '+LEVELS[next].name+' ';
-      show('next-level-button',won&&(sim.level<LEVELS.length-1||progress.mask!==1023));
+      show('next-level-button',won&&(sim.level<LEVELS.length-1||progress.mask!==COMPLETE_MASK));
       $('result-kills').textContent=sim.kills;
       $('result-time').textContent=Math.floor(sim.time/60)+':'+String(Math.floor(sim.time%60)).padStart(2,'0');
       $('result-health').textContent=Math.ceil(sim.player.health);

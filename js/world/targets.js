@@ -1,7 +1,7 @@
 import * as T from '../../vendor/three.module.min.js';
-import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.5.0';
-import { createSupplies } from './supplies.js?v=0.5.0';
-import { createChoiceTargets } from './choices.js?v=0.5.0';
+import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.6.0';
+import { createSupplies } from './supplies.js?v=0.6.0';
+import { createChoiceTargets } from './choices.js?v=0.6.0';
 
 function canvasTexture(width,height,draw){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
@@ -11,12 +11,14 @@ function canvasTexture(width,height,draw){
 }
 export function createTargets(scene){
   const recruits=new Map(),supplies=createSupplies(scene),choices=createChoiceTargets(scene);
+  const faceMats=new Map([1,3].map(amount=>{
   const card=canvasTexture(160,160,(ctx,w,h)=>{
     const fill=ctx.createLinearGradient(0,0,0,h);fill.addColorStop(0,'#46caff');fill.addColorStop(1,'#125bba');
     ctx.fillStyle=fill;ctx.fillRect(0,0,w,h);ctx.strokeStyle='#a3e6ff';ctx.lineWidth=5;ctx.strokeRect(6,6,w-12,h-12);
-    ctx.fillStyle='#fff';ctx.font='bold 96px Arial';ctx.textAlign='center';ctx.shadowColor='#123461';ctx.shadowBlur=8;ctx.fillText('+1',w/2,111);
+    ctx.fillStyle='#fff';ctx.font='bold 96px Arial';ctx.textAlign='center';ctx.shadowColor='#123461';ctx.shadowBlur=8;ctx.fillText('+'+amount,w/2,111);
   });
   const faceMat=new T.MeshStandardMaterial({map:card.texture,roughness:.32,metalness:.1,emissive:0x155888,emissiveIntensity:.5});
+  return [amount,faceMat];}));
   const sideMat=new T.MeshStandardMaterial({color:0x147cbd,metalness:.35,roughness:.38});
   const bodyGeometry=new T.BoxGeometry(1.25,1.25,.46),faceGeometry=new T.PlaneGeometry(1.22,1.22);
   const armoryCanvas=canvasTexture(384,512,()=>{});
@@ -53,7 +55,7 @@ export function createTargets(scene){
       for(const target of sim.recruits){
         if(!ids.has(target.id))continue;
         let group=recruits.get(target.id);
-        if(!group){group=new T.Group();const body=new T.Mesh(bodyGeometry,sideMat),face=new T.Mesh(faceGeometry,faceMat);face.position.z=.24;group.add(body,face);scene.add(group);recruits.set(target.id,group);}
+        if(!group){group=new T.Group();const body=new T.Mesh(bodyGeometry,sideMat),face=new T.Mesh(faceGeometry,faceMats.get(target.amount||1));face.position.z=.24;group.add(body,face);scene.add(group);recruits.set(target.id,group);}
         group.position.set(target.x,1.02+Math.sin(time*2+target.id)*.045,target.z);
         group.rotation.x=-.08;group.scale.setScalar(1);
       }

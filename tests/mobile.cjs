@@ -36,25 +36,25 @@ async function layout(page){
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);assert.equal((await page.evaluate(()=>window.__warTest.renderer())).quality,'high');
  await page.locator('#quality-button').tap();await page.locator('#pause-panel [data-menu]').tap();
  assert.equal(await page.locator('[data-level]:not(:disabled)').count(),1);
- await context.addCookies([{name:'war_survival_campaign_v1',value:'3ff',url:base}]);
+ await context.addCookies([{name:'war_survival_campaign_v1',value:'7fff',url:base}]);
  await page.reload();await page.waitForFunction(()=>window.__warTest?.ready);let sector=0;
  for(const [width,height] of [[320,568],[360,640],[390,844],[430,932],[768,1024],[844,390],[667,375],[568,320]]){
    await page.setViewportSize({width,height});await page.evaluate(landscape=>{const s=document.documentElement.style;s.setProperty('--safe-left',landscape?'44px':'0px');s.setProperty('--safe-right',landscape?'44px':'0px');s.setProperty('--safe-top',landscape?'0px':'24px');s.setProperty('--safe-bottom','20px');},width>height);
-   await page.locator('[data-level="'+(sector++%10)+'"]').tap();await touchCopy(page);const deploy=await page.locator('#start-button').boundingBox();assert.ok(deploy.y>=0&&deploy.y+deploy.height<=height,'Deploy visible without scrolling at '+width+'x'+height);assert.equal(await page.locator('.menu-content').evaluate(e=>e.scrollTop),0);
+   await page.locator('[data-level="'+(sector++%15)+'"]').tap();await touchCopy(page);const deploy=await page.locator('#start-button').boundingBox();assert.ok(deploy.y>=0&&deploy.y+deploy.height<=height,'Deploy visible without scrolling at '+width+'x'+height);assert.equal(await page.locator('.menu-content').evaluate(e=>e.scrollTop),0);
    await page.screenshot({path:path.join(output,width+'x'+height+'-menu.png')});await page.locator('#start-button').tap();await page.waitForTimeout(1600);await layout(page);await touchCopy(page);
    await page.screenshot({path:path.join(output,width+'x'+height+'-battle.png')});await page.locator('#pause-button').tap();await touchCopy(page);await page.locator('#pause-panel [data-menu]').tap();
  }
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{const s=document.documentElement.style;for(const key of ['left','right','top','bottom'])s.removeProperty('--safe-'+key);});
  await page.evaluate(()=>window.__warTest.useManualClock());
- await page.locator('[data-level="9"]').tap();await page.locator('#start-button').tap();let state,full=false;
+ await page.locator('[data-level="14"]').tap();await page.locator('#start-button').tap();let state,full=false;
  for(let i=0;i<1100;i++){
    state=await page.evaluate(()=>window.__warTest.snapshot());if(state.state!=='active')break;
-   if(state.squad===42&&!full){full=true;await page.waitForTimeout(100);await page.screenshot({path:path.join(output,'full-squad-citadel.png')});
+   if(state.squad===42&&!full){full=true;await page.waitForTimeout(100);await page.screenshot({path:path.join(output,'full-squad-observatory.png')});
      await page.locator('#pause-button').tap();await page.setViewportSize({width:320,height:568});await page.evaluate(()=>window.__warTest.place(3.8,16));await page.waitForTimeout(1200);
      const foot=await page.evaluate(()=>window.__warTest.screenPoint(3.8,0,19.5));const box=await page.locator('.squad-card').boundingBox();assert.ok(foot.y<box.y);
      await page.evaluate(()=>window.__warTest.place(0,11));await page.setViewportSize({width:390,height:844});await page.locator('#resume-button').tap();state=await page.evaluate(()=>window.__warTest.snapshot());}
    await page.evaluate(input=>window.__warTest.step(.2,input),strategy(state));
  }
  assert.equal(state.state,'victory');assert.ok(full);await touchCopy(page);await page.screenshot({path:path.join(output,'campaign-victory.png')});
- assert.deepEqual(errors,[]);console.log('PASS: drag to recruit and upgrade, two-finger artillery, release, rotation, quality defaults, eight layouts with safe insets, no lane menus, and mobile Level 10 victory.');await browser.close();
+ assert.deepEqual(errors,[]);console.log('PASS: drag to recruit and upgrade, two-finger artillery, release, rotation, quality defaults, eight layouts with safe insets, no lane menus, and mobile Level 15 victory.');await browser.close();
 })().catch(async e=>{console.error(e);await browser?.close();process.exitCode=1;});

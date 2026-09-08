@@ -1,8 +1,10 @@
+import { WORLDS } from '../../data/campaign.js?v=0.6.0';
 export const PROGRESS_COOKIE = 'war_survival_campaign_v1';
-export const LEVEL_COUNT = 10;
+export const LEVEL_COUNT = WORLDS.length;
+export const COMPLETE_MASK = (1 << LEVEL_COUNT) - 1;
 
 export function decodeProgress(value) {
-  return /^[0-9a-f]{1,3}$/i.test(value || '') && parseInt(value, 16) < 1 << LEVEL_COUNT ? parseInt(value, 16) : 0;
+  return /^[0-9a-f]{1,4}$/i.test(value || '') && parseInt(value, 16) <= COMPLETE_MASK ? parseInt(value, 16) : 0;
 }
 export function frontier(mask) {
   for (let i = 0; i < LEVEL_COUNT; i++) if (!(mask & (1 << i))) return i;
