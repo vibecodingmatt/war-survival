@@ -1,19 +1,19 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js?v=0.7.0';
-import { createEnvironment } from './world/environment.js?v=0.7.0';
-import { createArmies } from './entities/army.js?v=0.7.0';
-import { createTargets } from './world/targets.js?v=0.7.0';
-import { createEffects } from './systems/effects.js?v=0.7.0';
-import { BattlefieldAudio } from './systems/audio.js?v=0.7.0';
-import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.7.0';
-import { clamp } from './core/math.js?v=0.7.0';
-import { BOSS_TYPES } from '../data/campaign.js?v=0.7.0';
-import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.7.0';
-import { POWERS } from '../data/powers.js?v=0.7.0';
-import { AMMO } from '../data/munitions.js?v=0.7.0';
-import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.7.0';
-import { activatePower, openChoice } from './core/encounters.js?v=0.7.0';
-import { collectSupply } from './core/munitions.js?v=0.7.0';
+import { Simulation } from './core/simulation.js?v=0.7.1';
+import { createEnvironment } from './world/environment.js?v=0.7.1';
+import { createArmies } from './entities/army.js?v=0.7.1';
+import { createTargets } from './world/targets.js?v=0.7.1';
+import { createEffects } from './systems/effects.js?v=0.7.1';
+import { BattlefieldAudio } from './systems/audio.js?v=0.7.1';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.7.1';
+import { clamp } from './core/math.js?v=0.7.1';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.7.1';
+import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.7.1';
+import { POWERS } from '../data/powers.js?v=0.7.1';
+import { AMMO } from '../data/munitions.js?v=0.7.1';
+import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.7.1';
+import { activatePower, openChoice } from './core/encounters.js?v=0.7.1';
+import { collectSupply } from './core/munitions.js?v=0.7.1';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
@@ -230,6 +230,7 @@ async function boot(){
         damage:amount=>{sim.hurt(amount);},
         targets:()=>targets.snapshot(),
         world:()=>environment.snapshot(),
+        visualTime:seconds=>{worldTime=seconds;environment.update(worldTime,reducedMotion);},
         spectacle:()=>effects.snapshot(),
         clear:()=>{for(const e of sim.enemies)sim.damage(e,e.hp+1,false);},
         power:kind=>{activatePower(sim,kind);processEvents();},

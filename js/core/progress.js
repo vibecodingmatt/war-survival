@@ -1,4 +1,4 @@
-import { WORLDS } from '../../data/campaign.js?v=0.7.0';
+import { WORLDS } from '../../data/campaign.js?v=0.7.1';
 export const PROGRESS_COOKIE = 'war_survival_campaign_v1';
 export const LEVEL_COUNT = WORLDS.length;
 export const COMPLETE_MASK = (1 << LEVEL_COUNT) - 1;

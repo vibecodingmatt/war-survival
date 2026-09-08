@@ -1,7 +1,7 @@
 # War: Survival handoff
 
 Read `README.md` for the player rules and `docs/visual-combat-guide.md` for the
-rendering architecture, effect budgets, test fixtures and v0.7 changes.
+rendering architecture, effect budgets, test fixtures and v0.7.1 changes.
 `docs/balance.md` records the measured campaign outcomes. This is a standalone Git
 repository inside `games-playground`; run Git and npm from this directory.
 
@@ -44,6 +44,8 @@ repository inside `games-playground`; run Git and npm from this directory.
   Investigate failed seeds; do not weaken the assertions to hide regressions.
 - Visuals/effects: `npm run test:polish` checks every world, ammo and power visuals,
   simultaneous effects, cleanup, pause and reduced motion. Inspect its screenshots.
+- Wildlife: also run `npm run test:wildlife` for scheduled visitors, butterfly
+  gatherings, quiet intervals and desktop/phone composition in all 15 worlds.
 - Controls/HUD: `npm run test:browser`, `npm run test:mobile`.
 - End-to-end: `npm run test:campaign`; use `test:fun` to earn all seven powers
   through actual lane shooting, and `test:expansion` for old-save expansion checks.
@@ -52,6 +54,22 @@ repository inside `games-playground`; run Git and npm from this directory.
 - Chrome emulation validates layout and desktop-host cost; physical iOS/Android
   GPU performance still needs device testing. Record the distinction in reports.
 
-The v0.7 release passed the full readiness review on 2026-09-08. The Pages source
-is the repository root on `main`. Check the remote and release queries before
-shipping, and verify the public site after the Pages deployment completes.
+## Publishing default
+
+The user authorized direct production publishing on 2026-09-08. For requested
+War: Survival changes, finish the implementation and documentation, run all checks
+applicable to the change, then commit and push directly to production on `main`
+without asking for another publishing confirmation. A later instruction to keep
+work local, make a draft, or wait overrides this default. Read-only reviews do not
+authorize unrelated changes. Failed checks or unrelated unfinished work must not
+be included in a release.
+
+Follow [docs/publishing.md](docs/publishing.md): verify the repository and remote,
+preserve others' changes, wait for the Pages deployment of the pushed commit, and
+verify the public files and desktop/phone behavior before reporting success.
+The Pages source is the repository root on `main` for
+`vibecodingmatt/war-survival`. Never force-push to resolve divergence.
+
+The v0.7 release passed the full readiness review on 2026-09-08. The v0.7.1
+wildlife update passed unit, wildlife, polish, mobile and focused gathering
+performance checks that day. See [docs/wildlife.md](docs/wildlife.md).

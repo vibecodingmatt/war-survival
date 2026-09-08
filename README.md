@@ -1,6 +1,6 @@
 # War: Survival
 
-**Living Worlds & Toybox Arsenal · v0.7.0**
+**Living Worlds & Toybox Arsenal · v0.7.1 · Wildlife variety**
 
 A browser squad survival game with fifteen short, escalating levels. Recruit soldiers,
 catch moving weapon upgrades, and defeat each sector's guardian. Every level starts
@@ -43,7 +43,7 @@ The HUD keeps squad integrity, the equipped weapon, temporary boosts, and Artill
 | 09 · Lumen Wilds | Moonlit mushrooms and fireflies | Spore Empress |
 | 10 · The Sky Citadel | Floating islands and an eclipse gate | Eclipse Sovereign |
 | 11 · Coral Cathedral | Branching coral shelves, pulsing jellyfish and drifting tentacles | Coral Leviathan |
-| 12 · Clockwork Gardens | Turning brass gears, pendulums and fluttering mechanical butterflies | Brass Timekeeper |
+| 12 · Clockwork Gardens | Turning brass gears, pendulums, beetles and glass-wing dragonflies | Brass Timekeeper |
 | 13 · Moonlotus Marsh | Unfurling lotus flowers, lily pads, ripples and dancing wisps | Lotus Matriarch |
 | 14 · Prismatic Rift | Levitating crystal gardens, orbital fragments and aurora ribbons | Prism Titan |
 | 15 · Dragon Observatory | Floating orreries, orbiting planets and an articulated flying dragon | Astral Wyrm |
@@ -167,13 +167,23 @@ Waterfalls follow rocky stream beds over curved, irregular lips into foam and sp
 The caldera adds tumbling ash, rising embers, lava channels and expanding soot clouds.
 Every sector has additional animated gardens, wildlife and flowing light details,
 from orchid banks and waterfall rainbows to spirit koi, storm vortices, lava
-fountains, festival kites and comet migrations. Nearby themed focal points keep
+fountains and rare celestial whales. Nearby themed focal points keep
 the scenery visible in portrait. Scenery uses bundled textures, instanced geometry, animated water, soft mist,
 wind-driven foliage, and bounded weather particles. Sector scenery is disposed when
 switching worlds; inactive weapon models are released after their fallen soldiers
 finish animating. Soldier armor is batched by material and joint; effects use
 bounded pools and distant scenery updates less often on Balanced. There is no
 runtime CDN, backend, account, installation, or asset-generation service.
+
+Wildlife now varies by world, with small resident groups instead of a blanket of
+butterflies. Iridescent blue morphos live near jungle waterfalls, a few monarchs
+visit the autumn gardens, and moon moths share the luminous forest with fireflies.
+Other worlds have veined dragonflies, metallic beetles, striped fish, gliding rays,
+or birds with layered feathers. The jungle occasionally hosts a larger spiral
+of butterflies rising beside the falls. Macaws, kingfishers, hawks, cranes, herons,
+and other visitors make short flights above the gorge, with quiet gaps between
+visits. Wildlife stays outside the combat lanes and freezes on pause. Balanced
+graphics reduces population rather than simplifying individual creatures.
 
 ## Development and verification
 
@@ -190,6 +200,8 @@ npm run test:campaign
 npm run test:fun
 npm run test:expansion
 npm run test:polish
+npm run test:wildlife
+npm run verify:release
 ```
 
 Browser checks require Chrome and a running server. Set `CHROME_PATH` for another
@@ -218,6 +230,13 @@ The `main` branch and repository root publish the static site. `.nojekyll` disab
 Jekyll processing. Paths work beneath `/war-survival/`; changed browser modules use
 a release query to prevent stale files from mixing after an update. Reference
 videos, dependencies, logs, and screenshots are excluded from Git.
+
+Completed requested changes publish directly to production after all applicable
+checks pass, unless the user asks to keep them local or wait. Commit and push to
+`main`, wait for GitHub Pages, then run `npm run verify:live` against the public
+site. A successful Git push alone does not establish that the update is live.
+See [publishing guidelines](docs/publishing.md) for the release workflow and
+the reusable [War: Survival maintainer skill](skills/war-survival-maintainer/SKILL.md).
 
 Start maintenance with [AGENTS.md](AGENTS.md) and the
 [visual/combat guide](docs/visual-combat-guide.md). See also

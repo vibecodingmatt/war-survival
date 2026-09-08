@@ -1,30 +1,31 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.7.0';
+import { randomSource } from '../core/math.js?v=0.7.1';
+import { createWildlife } from './wildlife.js?v=0.7.1';
 
 // All additions live under the biome root. No lights, textures, or per-particle meshes.
 // The battlefield occupies |x| < 7.6; landmarks and wildlife stay outside that space.
 const THEMES = {
-  jungle: { garden:'flower', flight:'butterfly', ribbon:'rainbow', colors:[0xffb7d5,0xffdb84,0x89e9b5], features:['orchid banks','morpho butterflies','rainbows in the waterfall mist'] },
-  ember: { garden:'crystal', flight:'lantern', ribbon:'spiral', colors:[0xffb44e,0xff795c,0xffdc9a], features:['emberglass gardens','ascending wish lanterns','beacon fire spirals'] },
-  jade: { garden:'flower', flight:'koi', ribbon:'rainbow', colors:[0x9effdf,0xffffff,0xffbba3], features:['white water lilies','flying jade koi','layered mist bows'] },
-  ice: { garden:'crystal', flight:'moth', ribbon:'orbit', colors:[0x91eaff,0xa7b2ff,0xe5fcff], features:['breathing frost crystals','ice moths','glacial halo arcs'] },
-  desert: { garden:'crystal', flight:'kite', ribbon:'orbit', colors:[0xffd67e,0xffa475,0x91ede0], features:['amber geodes','swallowtail desert kites','golden oasis halos'] },
-  storm: { garden:'crystal', flight:'moth', ribbon:'spiral', colors:[0xa8baff,0x85e0f6,0xe7c0ff], features:['charged storm stones','lightning moths','monolith storm vortices'] },
-  autumn: { garden:'flower', flight:'kite', ribbon:'stream', colors:[0xffbd79,0xffe0a4,0xef8d99], features:['chrysanthemum terraces','festival fish kites','rivers of gold leaves'] },
-  volcano: { garden:'crystal', flight:'ember', ribbon:'spiral', colors:[0xff7140,0xffc46a,0xf5423e], features:['molten obsidian seams','rising cinder fragments','spiraling lava fountains'] },
-  luminous: { garden:'flower', flight:'moth', ribbon:'spiral', colors:[0xa7a1ff,0xffa7df,0x8affe6], features:['pulsing spore flowers','luminous moon moths','mycelium spore currents'] },
-  celestial: { garden:'crystal', flight:'kite', ribbon:'orbit', colors:[0xffe9b3,0xbcb6ff,0xa6e7ff], features:['cloud opal gardens','celestial sail gliders','orbiting eclipse filaments'] },
-  coral: { garden:'flower', flight:'koi', ribbon:'stream', colors:[0xff9cce,0x89f4ed,0xffdaae], features:['swaying sea anemones','shoals of jewel fish','underwater caustic shafts'] },
-  clockwork: { garden:'gear', flight:'butterfly', ribbon:'orbit', colors:[0xffd38a,0x91ffd5,0xe7b876], features:['tiny clockwork daisies','brass swallowtails','escapement orbit rings'] },
-  lotus: { garden:'flower', flight:'koi', ribbon:'stream', colors:[0xffb7df,0xb7bbff,0x97eedd], features:['moonlit lotus terraces','spirit koi processions','silver moonlight currents'] },
-  prismatic: { garden:'crystal', flight:'crystal', ribbon:'orbit', colors:[0xffa5df,0x9ffff4,0xc2a5ff], features:['rainbow crystal blooms','spinning prism shoals','chromatic orbital trails'] },
-  astral: { garden:'crystal', flight:'comet', ribbon:'orbit', colors:[0xffdc94,0xb6b1ff,0x9beaff], features:['constellation gardens','comet migrations','celestial navigation rings'] },
+  jungle: { garden:'flower', ribbon:'rainbow', colors:[0xffb7d5,0xffdb84,0x89e9b5], features:['orchid banks','rainbows in the waterfall mist'] },
+  ember: { garden:'crystal', ribbon:'spiral', colors:[0xffb44e,0xff795c,0xffdc9a], features:['emberglass gardens','beacon fire spirals'] },
+  jade: { garden:'flower', ribbon:'rainbow', colors:[0x9effdf,0xffffff,0xffbba3], features:['white water lilies','layered mist bows'] },
+  ice: { garden:'crystal', ribbon:'orbit', colors:[0x91eaff,0xa7b2ff,0xe5fcff], features:['breathing frost crystals','glacial halo arcs'] },
+  desert: { garden:'crystal', ribbon:'orbit', colors:[0xffd67e,0xffa475,0x91ede0], features:['amber geodes','golden oasis halos'] },
+  storm: { garden:'crystal', ribbon:'spiral', colors:[0xa8baff,0x85e0f6,0xe7c0ff], features:['charged storm stones','monolith storm vortices'] },
+  autumn: { garden:'flower', ribbon:'stream', colors:[0xffbd79,0xffe0a4,0xef8d99], features:['chrysanthemum terraces','rivers of gold leaves'] },
+  volcano: { garden:'crystal', ribbon:'spiral', colors:[0xff7140,0xffc46a,0xf5423e], features:['molten obsidian seams','spiraling lava fountains'] },
+  luminous: { garden:'flower', ribbon:'spiral', colors:[0xa7a1ff,0xffa7df,0x8affe6], features:['pulsing spore flowers','mycelium spore currents'] },
+  celestial: { garden:'crystal', ribbon:'orbit', colors:[0xffe9b3,0xbcb6ff,0xa6e7ff], features:['cloud opal gardens','orbiting eclipse filaments'] },
+  coral: { garden:'flower', ribbon:'stream', colors:[0xff9cce,0x89f4ed,0xffdaae], features:['swaying sea anemones','underwater caustic shafts'] },
+  clockwork: { garden:'gear', ribbon:'orbit', colors:[0xffd38a,0x91ffd5,0xe7b876], features:['tiny clockwork daisies','escapement orbit rings'] },
+  lotus: { garden:'flower', ribbon:'stream', colors:[0xffb7df,0xb7bbff,0x97eedd], features:['moonlit lotus terraces','silver moonlight currents'] },
+  prismatic: { garden:'crystal', ribbon:'orbit', colors:[0xffa5df,0x9ffff4,0xc2a5ff], features:['rainbow crystal blooms','chromatic orbital trails'] },
+  astral: { garden:'crystal', ribbon:'orbit', colors:[0xffdc94,0xb6b1ff,0x9beaff], features:['constellation gardens','celestial navigation rings'] },
 };
 
 export function createLivingWorld(root, profile, level, surfaces) {
   const theme=THEMES[profile.biome], random=randomSource(8181+level*73), range=(a,b)=>a+random()*(b-a);
   const d=new T.Object3D(), color=new T.Color(), time={value:0};
-  const meshes=[],flights=[];let balanced=false,lastTime=-1,qualityScale=1;
+  const meshes=[];
   const add=mesh=>{root.add(mesh);meshes.push(mesh);return mesh;};
   function batch(geometry,material,count){
     const mesh=add(new T.InstancedMesh(geometry,material,count));mesh.frustumCulled=false;
@@ -106,17 +107,10 @@ export function createLivingWorld(root, profile, level, surfaces) {
   rays.position.set(-20,9,-45);rays.scale.set(24,44,1);rays.rotation.z=-.26;
   const ray2=rays.clone();ray2.position.x=24;ray2.rotation.z=.26;add(ray2);
 
-  const count=36,swimmer=theme.flight==='koi',winged=['butterfly','moth','kite'].includes(theme.flight),hasWings=swimmer||winged;
-  const bodies=batch(theme.flight==='lantern'?new T.BoxGeometry(1,1.3,1):new T.IcosahedronGeometry(1,0),new T.MeshStandardMaterial({color:0xffffff,emissive:profile.accent,emissiveIntensity:.4,metalness:.4,roughness:.35}),count);
-  const wingGeometry=new T.BufferGeometry();wingGeometry.setAttribute('position',new T.Float32BufferAttribute([0,0,0,1,.05,-.55,.65,0,.7,0,0,0,.65,0,.7,.18,0,.8],3));wingGeometry.computeVertexNormals();
-  const wings=batch(wingGeometry,new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,toneMapped:false}),count*2);
-  for(let i=0;i<count;i++){
-    const side=i%2?1:-1;flights.push({x:side*range(12,25),y:range(1,12),z:range(-65,14),phase:range(0,6.28),size:range(.25,.55)});
-    bodies.setColorAt(i,color.setHex(theme.colors[i%3]));for(let j=0;j<2;j++)wings.setColorAt(i*2+j,color.setHex(theme.colors[(i+j)%3]));
-  }
+  const wildlife=createWildlife(root,profile.biome,level);
   return {
-    features:theme.features,
-    setQuality(value,scale=1){balanced=value==='balanced';qualityScale=scale;lastTime=-1;},
+    features:[theme.features[0],wildlife.description,theme.features[1]],
+    setQuality(value,scale=1){wildlife.setQuality(value,scale);},
     update(t,reduced=false){
       time.value=t;ribbon.material.uniforms.opacity.value=reduced?.25:.55;
       for(const [i,hero] of heroes.entries()){
@@ -124,21 +118,8 @@ export function createLivingWorld(root, profile, level, surfaces) {
         if(celestial){hero.children[0].rotation.y=t*.2;for(let j=1;j<=3;j++)hero.children[j].rotation.z=t*(j%2?.16:-.12);
           for(let j=0;j<3;j++){const a=t*(.35+j*.08)+j*2.1;hero.children[j+4].position.set(Math.cos(a)*(2.1+j*.35),Math.sin(a)*(1+j*.2),Math.sin(a)*(2+j*.3));}}
       }
-      // Distant creatures can update at 30Hz on phones, independent of combat's 60Hz clock.
-      if(balanced&&lastTime>=0&&t-lastTime<1/30)return;lastTime=t;
-      const n=Math.round((balanced?24:count)*qualityScale);bodies.count=n;wings.count=hasWings?n*2:0;
-      for(let i=0;i<n;i++){
-        const f=flights[i],a=t*(swimmer?.45:.3)+f.phase,x=f.x+Math.sin(a)*2.2,z=f.z+Math.cos(a)*3.4;
-        const rising=theme.flight==='lantern'||theme.flight==='ember';
-        const y=rising?1+(f.y+t*(theme.flight==='ember'?1.5:.6))%14:f.y+Math.sin(a*2)*.7,s=f.size,heading=Math.atan2(Math.cos(a)*2.2,-Math.sin(a)*3.4);
-        put(bodies,i,x,y,z,s*(swimmer?.45:.3),s*(theme.flight==='lantern'?1:.5),s*(swimmer?1.5:theme.flight==='comet'?2.8:.75),0,heading,Math.sin(a)*.13);
-        if(hasWings)for(const side of [-1,1]){
-          const flap=winged?Math.sin(t*(reduced?1:9)+f.phase)*.75:Math.sin(t*3+f.phase)*.25;
-          put(wings,i*2+(side>0?1:0),x,y,z,side*s*(swimmer?.7:1.8),s,s*(swimmer?1:1.6),0,heading,side*(.2+flap));
-        }
-      }
-      bodies.instanceMatrix.needsUpdate=wings.instanceMatrix.needsUpdate=true;
+      wildlife.update(t,reduced);
     },
-    snapshot:()=>({details:theme.features,creatures:bodies.count,detailBatches:meshes.length,detailTime:time.value}),
+    snapshot:()=>({details:[theme.features[0],wildlife.description,theme.features[1]],detailBatches:meshes.length+wildlife.batches,detailTime:time.value,...wildlife.snapshot()}),
   };
 }

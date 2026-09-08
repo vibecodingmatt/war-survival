@@ -1,8 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
 import { HDRLoader } from '../../vendor/HDRLoader.js';
-import { randomSource } from '../core/math.js?v=0.7.0';
-import { WORLDS } from '../../data/campaign.js?v=0.7.0';
-import { createAmbience } from './ambience.js?v=0.7.0';
+import { randomSource } from '../core/math.js?v=0.7.1';
+import { WORLDS } from '../../data/campaign.js?v=0.7.1';
+import { createAmbience } from './ambience.js?v=0.7.1';
 
 const dummy = new T.Object3D();
 function instances(scene, geometry, material, entries, shadow = true) {
@@ -230,14 +230,11 @@ export async function createEnvironment(scene, renderer) {
     core.position.copy(flame.position);core.position.y-=.25;scene.add(core);
   }
   instances(scene,new T.CylinderGeometry(.55,.22,.5,8),brass,braziers);
-  // Sunlit dust and distant birds keep the otherwise still landscape alive.
+  // Sunlit dust complements the biome-owned wildlife and occasional overhead visitors.
   const motePositions = new Float32Array(180*3);
   for(let i=0;i<180;i++){motePositions[i*3]=range(-30,30);motePositions[i*3+1]=range(1,18);motePositions[i*3+2]=range(-65,30);}
   const moteGeo=new T.BufferGeometry();moteGeo.setAttribute('position',new T.BufferAttribute(motePositions,3));
   const motes=new T.Points(moteGeo,new T.PointsMaterial({color:0xffe8ad,size:.055,transparent:true,opacity:.55,depthWrite:false}));scene.add(motes);
-  const birdGeo=new T.BufferGeometry();birdGeo.setAttribute('position',new T.Float32BufferAttribute([-1,0,0,0,-.2,0,1,0,0],3));
-  const birds=[];
-  for(let i=0;i<7;i++){const bird=new T.Line(birdGeo,new T.LineBasicMaterial({color:0x465e5a}));bird.position.set(range(-45,45),range(18,28),range(-140,-90));bird.scale.setScalar(range(.7,1.3));scene.add(bird);birds.push(bird);}
   let emberGate=false,currentWorld=WORLDS[0],baseSun=3.7;
   const ambience=createAmbience(scene,{color:cliffColor,normal:cliffNormal});
   const moteOrigins=motePositions.slice();
@@ -260,7 +257,6 @@ export async function createEnvironment(scene, renderer) {
       water.position.y=currentWorld.biome==='lotus'?-3.6:currentWorld.biome==='coral'?-9:-29;
       motes.material.color.set(currentWorld.accent);
       motes.material.size=emberGate?.095:.055;motes.material.opacity=emberGate?.8:.55;
-      for(const bird of birds)bird.visible=!night&&!emberGate;
       paving.material.color.set(currentWorld.stone);stone.color.set(currentWorld.stone);goldenStone.color.set(currentWorld.stone);cliffMat.color.set(currentWorld.stone);
       for(let i=0;i<cliffs.length;i++)cliffMesh.setColorAt(i,new T.Color(currentWorld.stone).multiplyScalar(.68+(i%5)*.035));cliffMesh.instanceColor.needsUpdate=true;
       leaves.material.color.set(currentWorld.leaf);
@@ -282,7 +278,6 @@ export async function createEnvironment(scene, renderer) {
       }
       motes.rotation.y=Math.sin(time*.035)*.06;
       if(emberGate){for(let i=0;i<180;i++){motePositions[i*3]=moteOrigins[i*3]+Math.sin(time*.5+i)*.5;motePositions[i*3+1]=(moteOrigins[i*3+1]+time*.65)%18;}moteGeo.attributes.position.needsUpdate=true;}
-      birds.forEach((bird,i)=>{bird.position.x+=Math.sin(time*.2+i)*.012;bird.rotation.z=Math.sin(time*2.5+i)*.1;});
     },
   };
 }

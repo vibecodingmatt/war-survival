@@ -1,6 +1,6 @@
 import * as T from '../../vendor/three.module.min.js';
-import { mergeRigidParts } from '../core/geometry.js?v=0.7.0';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.7.0';
+import { mergeRigidParts } from '../core/geometry.js?v=0.7.1';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.7.1';
 
 export function createComedy(scene){
   const d=new T.Object3D(),color=new T.Color(),duckBounces=[],bits=[],finales=[];

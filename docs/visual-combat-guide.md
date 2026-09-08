@@ -1,4 +1,4 @@
-# Living Worlds & Toybox Arsenal · v0.7.0
+# Living Worlds & Toybox Arsenal · v0.7.1
 
 This guide is the entry point for continuing the visual/combat work without the
 original conversation. The release adds detail to all fifteen sectors, five random
@@ -20,7 +20,10 @@ or generated raster assets were introduced.
 | `js/core/quality.js` | Cosmetic-only adaptive resolution with hysteresis |
 | `js/world/environment.js` | Shared bridge, lighting, water, terrain and graphics setting |
 | `js/world/ambience.js` | Active sector ownership, scenery cleanup, weather updates |
-| `js/world/living-worlds.js` | New gardens, portrait landmarks, wildlife, ribbons and shafts |
+| `js/world/living-worlds.js` | Gardens, portrait landmarks, wildlife integration, ribbons and shafts |
+| `data/wildlife.js` | Biome populations and analytical visitor schedules |
+| `js/world/wildlife.js` | Bounded resident groups, occasional visitors and butterfly gatherings |
+| `js/world/wildlife-models.js` | Colored animal geometry, curved wings, markings and feather layers |
 | `js/world/wonderlands.js` | Original five expansion worlds and articulated dragon |
 | `js/entities/army.js` | Material/joint batches, gait, recoil, slips and celebrations |
 | `js/entities/bosses.js` | Guardian models, attacks, stagger and collapse animation |
@@ -38,18 +41,20 @@ in portrait. Gardens are instanced onto textured ledges. Orbit/stream/spiral/mis
 ribbons share a draw and animate in a shader. Two soft light-shaft planes suggest
 volume without a postprocessing pass or additional lights. Wildlife is instanced,
 with separate body and wing batches; its travel remains outside the firing lanes.
+v0.7.1 removes the shared triangle-wing swarm, the extra sixteen Clockwork
+butterflies, and the seven static bird outlines. See [wildlife details](wildlife.md).
 
 | Sectors | Added motifs |
 | --- | --- |
-| Ashen / Jade | Orchids and lilies, butterflies or spirit koi, waterfall rainbows |
-| Ember / Amber | Emberglass, lantern flights, festival kites and gold currents |
-| Frostglass / Tempest | Frost crystals, ice/lightning moths, halo arcs and vortices |
-| Sunscar / Cinder | Amber geodes, desert kites, molten seams and lava fountains |
-| Lumen / Moonlotus | Spore flowers, moon moths, lotus terraces and spirit koi |
-| Sky Citadel / Prismatic | Cloud opals, gliders, prism shoals and orbital filaments |
-| Coral | Anemones, jewel-fish schools and caustic shafts |
-| Clockwork | Mechanical daisies, brass swallowtails and escapement rings |
-| Observatory | Constellation gardens, comet migrations and nearby astrolabes |
+| Ashen / Jade | Morphos, dragonflies, koi, macaws/kingfishers and waterfall rainbows |
+| Ember / Amber | Fireflies, scarabs, monarchs, songbirds and swallows/cranes |
+| Frostglass / Tempest | Snow finches/geese, swallows/ravens, halo arcs and vortices |
+| Sunscar / Cinder | Scarabs, dragonflies, hawks/ravens, molten seams and lava fountains |
+| Lumen / Moonlotus | Moon moths, fireflies, bats/herons and lotus terraces |
+| Sky Citadel / Prismatic | Swallows, cloud/crystal rays and passing cranes/crystal birds |
+| Coral | Striped reef fish, rays, manta visitors and caustic shafts |
+| Clockwork | Brass beetles, glass-wing dragonflies, brass birds and escapement rings |
+| Observatory | Star rays, fireflies, rare celestial whales and nearby astrolabes |
 
 `ambience` owns and disposes biome geometry/materials when a sector changes. Bundled
 stone textures and the shared cloud texture are borrowed, not disposed by a sector.
@@ -113,7 +118,8 @@ motion, and retains the existing suppression of camera shake and lightning flash
 | Debris shards | 180 | 90 |
 | Bullet trails | 360 | 160 |
 | Ambient weather | 420 | 240 |
-| Wildlife | 36 | 24 |
+| Resident wildlife | 4–10 | 3–7 |
+| Wildlife including visits/gatherings | Up to 21 | Up to 13 |
 | Shadow map | 2048 | 1024 |
 
 Soldier parts are merged by material and joint, with their local offsets baked once.
@@ -180,6 +186,12 @@ whose first normal rifts cover the deck, then earns them by shooting the choice.
 These fixtures are for rendering tests. `tests/strategy.mjs` is the ordinary-input
 player policy used by the campaign and balance tests; never substitute fixture
 damage or free upgrades into a claimed campaign victory.
+
+`test:wildlife` visits every biome on desktop and phone, seeks to scheduled
+visitors through the test-only `visualTime(seconds)` hook, verifies arrival,
+departure, pause and the butterfly gathering, and captures the compositions.
+This moves only the visual clock. `tests/wildlife.test.mjs` also checks geometry,
+population caps, combat-lane clearance and changing visitor schedules.
 
 The complete campaign/mobile examples use seed 19. The 180-run balance suite also
 retains seeds 731 and 2048, including the permitted expansion defeats. The mobile

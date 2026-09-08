@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.7.0';
+import { randomSource } from '../core/math.js?v=0.7.1';
 
 // Each material/shape is one batch, including articulated petals, gears and creatures.
 export function createWonderland(root,profile,clock,cloudMap,surfaces){
@@ -64,7 +64,7 @@ export function createWonderland(root,profile,clock,cloudMap,surfaces){
     }
   }
   if(profile.landmark==='gears'){
-    features.push('interlocking clockwork','swinging pendulums','mechanical butterflies');
+    features.push('interlocking clockwork','swinging pendulums','clockwork wildlife');
     for(const side of [-1,1])for(let i=0;i<4;i++){
       const x=side*(17+i%2*6),z=9-i*25,y=3,r=3.7-i*.2,spin=side*(i%2?-1:1)*.18;
       put('rod','stone',[x,-2,z],[.6,13,.6]);
@@ -80,12 +80,6 @@ export function createWonderland(root,profile,clock,cloudMap,surfaces){
       put('orb','cyan',[x,y-4,z+.7],[.55,.55,.26],[0,0,0],(t,o)=>{const a=Math.sin(t*1.2+i)*.4;o.position.x+=Math.sin(a)*4;o.position.y=y-Math.cos(a)*4;});
       for(let j=0;j<7;j++)put('rock','leaf',[x+range(-3,3),-3+range(0,2),z+range(-2,2)],[1.4,1.1,1.4]);
       for(let j=0;j<10;j++)put('petal','leaf',[x+range(-3,3),-1.5,z+range(-2,2)],[.6,.8,.6],[.7,range(0,6.28),.4],(t,o)=>{o.rotation.z+=Math.sin(t*.5+j)*.12;});
-    }
-    for(let i=0;i<16;i++){
-      const x=(i%2?1:-1)*range(11,26),y=range(3,10),z=range(-75,25);
-      for(const side of [-1,1]){
-      put('petal',i%2?'cyan':'pink',[x,y,z],[.6,.6,.6],[0,0,0],(t,o)=>{o.position.x+=Math.sin(t*.6+i)*2;o.position.y+=Math.cos(t+i)*.5;o.rotation.set(.4,side*Math.sin(t*7+i)*.9,side*1.1);});
-      }
     }
   }
   if(profile.landmark==='lotus'){
