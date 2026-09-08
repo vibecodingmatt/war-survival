@@ -73,13 +73,13 @@ test('rift powers expire on the battle clock without persisting into later encou
   step(s,10.2);assert.equal(s.state,'active');for(const kind of POWER_DECK)assert.equal(s.buffs[kind],0);
 });
 
-test('five-power shuffle bags vary by seed and have no adjacent repeated offers',()=>{
+test('seven-power shuffle bags vary by seed and have no adjacent repeated offers',()=>{
   const sequences=[];
   for(const seed of [731,19,2048]){
-    const s=new Simulation(seed);s.start();const offers=Array.from({length:20},()=>nextPower(s));sequences.push(offers.join(','));
-    for(let i=0;i<20;i+=5)assert.equal(new Set(offers.slice(i,i+5)).size,5);
+    const s=new Simulation(seed);s.start();const count=POWER_DECK.length*4,offers=Array.from({length:count},()=>nextPower(s));sequences.push(offers.join(','));
+    for(let i=0;i<count;i+=POWER_DECK.length)assert.equal(new Set(offers.slice(i,i+POWER_DECK.length)).size,POWER_DECK.length);
     assert.ok(offers.every((kind,i)=>!i||kind!==offers[i-1]));
-    const twin=new Simulation(seed);twin.start();assert.deepEqual(Array.from({length:20},()=>nextPower(twin)),offers);
+    const twin=new Simulation(seed);twin.start();assert.deepEqual(Array.from({length:count},()=>nextPower(twin)),offers);
   }
   assert.equal(new Set(sequences).size,3);
 });

@@ -1,8 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
 import { HDRLoader } from '../../vendor/HDRLoader.js';
-import { randomSource } from '../core/math.js?v=0.6.0';
-import { WORLDS } from '../../data/campaign.js?v=0.6.0';
-import { createAmbience } from './ambience.js?v=0.6.0';
+import { randomSource } from '../core/math.js?v=0.7.0';
+import { WORLDS } from '../../data/campaign.js?v=0.7.0';
+import { createAmbience } from './ambience.js?v=0.7.0';
 
 const dummy = new T.Object3D();
 function instances(scene, geometry, material, entries, shadow = true) {
@@ -128,7 +128,7 @@ export async function createEnvironment(scene, renderer) {
   instances(scene, new T.TorusGeometry(8.7, 1.8, 6, 18, Math.PI), darkStone, arches);
 
   // Layered gorge walls and distant silhouettes.
-  const rockGeometry = new T.IcosahedronGeometry(1, 5), rp = rockGeometry.attributes.position;
+  const rockGeometry = new T.IcosahedronGeometry(1, 3), rp = rockGeometry.attributes.position;
   for (let i = 0; i < rp.count; i++) {
     const x=rp.getX(i),y=rp.getY(i),z=rp.getZ(i);
     const scale=1+Math.sin(x*7+y*5+z*3)*.07+Math.sin(x*17-y*11+z*9)*.032+Math.sin(y*27+z*23)*.017;
@@ -155,7 +155,7 @@ export async function createEnvironment(scene, renderer) {
       c: new T.Color().setHSL(0.44, 0.1, range(0.45,0.65)) });
   }
   const cliffMesh=instances(scene, rockGeometry, cliffMat, cliffs),outcropMesh=instances(scene, rockGeometry, darkStone, outcrops);
-  const mountainMesh=instances(scene, rockGeometry, new T.MeshStandardMaterial({ color: 0x819b8e, roughness: 1 }), mountains, false);
+  const mountainMesh=instances(scene, new T.IcosahedronGeometry(1,3), new T.MeshStandardMaterial({ color: 0x819b8e, roughness: 1 }), mountains, false);
 
   // Ancient gate: deep opening, stacked lintels, fluted columns, and broken towers.
   const blocks = [], trim = [];
@@ -241,8 +241,10 @@ export async function createEnvironment(scene, renderer) {
   let emberGate=false,currentWorld=WORLDS[0],baseSun=3.7;
   const ambience=createAmbience(scene,{color:cliffColor,normal:cliffNormal});
   const moteOrigins=motePositions.slice();
+  let quality='high',lastBannerTime=-1;
   return {
     sun,
+    setQuality(value,scale=1){quality=value;ambience.setQuality(value,scale);leaves.castShadow=value==='high';cliffMesh.castShadow=outcropMesh.castShadow=value==='high';motes.geometry.setDrawRange(0,Math.round((value==='high'?180:100)*scale));},
     setLevel(index){
       currentWorld=WORLDS[index];emberGate=currentWorld.weather==='embers';
       const night=['ice','storm','luminous','volcano','coral','lotus','prismatic','astral'].includes(currentWorld.biome);
@@ -274,7 +276,10 @@ export async function createEnvironment(scene, renderer) {
       const lightning=!reduced&&currentWorld.weather==='storm'&&time%17>16.7?Math.pow(Math.sin((time%17-16.7)*34),6)*1.7:0;
       sun.intensity=baseSun+lightning;
       for(let i=0;i<flames.length;i++){const f=flames[i];f.scale.y=2+Math.sin(time*9+i*4)*.3;f.scale.x=1.3+Math.sin(time*13+i)*.13;}
-      for(const banner of banners){const p=banner.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);p.setZ(i,Math.sin(time*2+y*2+banner.position.x)*.16*(2.7-y)/5.4);}p.needsUpdate=true;banner.geometry.computeVertexNormals();}
+      if(time-lastBannerTime>(quality==='high'?1/60:1/30)){
+        lastBannerTime=time;
+        for(const banner of banners){const p=banner.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);p.setZ(i,Math.sin((reduced?time*.15:time)*2+y*2+banner.position.x)*.16*(2.7-y)/5.4);}p.needsUpdate=true;}
+      }
       motes.rotation.y=Math.sin(time*.035)*.06;
       if(emberGate){for(let i=0;i<180;i++){motePositions[i*3]=moteOrigins[i*3]+Math.sin(time*.5+i)*.5;motePositions[i*3+1]=(moteOrigins[i*3+1]+time*.65)%18;}moteGeo.attributes.position.needsUpdate=true;}
       birds.forEach((bird,i)=>{bird.position.x+=Math.sin(time*.2+i)*.012;bird.rotation.z=Math.sin(time*2.5+i)*.1;});

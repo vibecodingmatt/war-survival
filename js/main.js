@@ -1,15 +1,19 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js?v=0.6.0';
-import { createEnvironment } from './world/environment.js?v=0.6.0';
-import { createArmies } from './entities/army.js?v=0.6.0';
-import { createTargets } from './world/targets.js?v=0.6.0';
-import { createEffects } from './systems/effects.js?v=0.6.0';
-import { BattlefieldAudio } from './systems/audio.js?v=0.6.0';
-import { BARRAGE_COOLDOWN, LIMITS, LEVELS } from '../data/waves.js?v=0.6.0';
-import { clamp } from './core/math.js?v=0.6.0';
-import { BOSS_TYPES } from '../data/campaign.js?v=0.6.0';
-import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.6.0';
-import { POWERS } from '../data/powers.js?v=0.6.0';
+import { Simulation } from './core/simulation.js?v=0.7.0';
+import { createEnvironment } from './world/environment.js?v=0.7.0';
+import { createArmies } from './entities/army.js?v=0.7.0';
+import { createTargets } from './world/targets.js?v=0.7.0';
+import { createEffects } from './systems/effects.js?v=0.7.0';
+import { BattlefieldAudio } from './systems/audio.js?v=0.7.0';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.7.0';
+import { clamp } from './core/math.js?v=0.7.0';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.7.0';
+import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.7.0';
+import { POWERS } from '../data/powers.js?v=0.7.0';
+import { AMMO } from '../data/munitions.js?v=0.7.0';
+import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.7.0';
+import { activatePower, openChoice } from './core/encounters.js?v=0.7.0';
+import { collectSupply } from './core/munitions.js?v=0.7.0';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
@@ -22,6 +26,7 @@ let touchMode=coarsePointer.matches,quality=touchMode?'balanced':'high',qualityM
 let previousTime=0,lastRenderTime=0,hudTime=0,accumulator=0,worldTime=0,shake=0,flash=0,bannerTime=0,calloutTime=0;
 let frames=0,frameTotal=0,metrics={fps:0,calls:0,triangles:0},modal=null;
 let manualTestClock=false;
+const governor=createQualityGovernor(),frameSamples=[];let cpuTotal=0;
 const keys=new Set(),pointer={active:false,id:null,x:0,y:0,dx:0,dz:0};
 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isTouch=()=>touchMode;
@@ -35,8 +40,10 @@ function updateControls(touch=coarsePointer.matches){
   if(changed&&!qualityManual)applyQuality(touch||coarsePointer.matches?'balanced':'high');
 }
 function applyQuality(value){
+  governor.reset();
   quality=value;$('quality-button').textContent='Graphics: '+(quality==='high'?'High':'Balanced');
   if(environment){
+    environment.setQuality(value);effects?.setQuality(value);
     environment.sun.shadow.mapSize.setScalar(quality==='high'?2048:1024);
     environment.sun.shadow.map?.dispose();environment.sun.shadow.map=null;
   }
@@ -134,8 +141,9 @@ function updateHud(){
   $('weapon-name').textContent='MK '+['I','II','III','IV'][p.weaponLevel-1]+' · '+sim.weapon.name;
   const buffs=[];if(sim.shield>0)buffs.push('SHIELD '+Math.ceil(sim.shield));for(const [kind,seconds] of Object.entries(sim.buffs))if(seconds>0)buffs.push((POWERS[kind]?.name||kind.toUpperCase())+' '+Math.ceil(seconds)+'s');
   $('buff-status').textContent=buffs.join(' · ');show('buff-status',buffs.length>0);
+  if(sim.ammo){buffs.unshift(AMMO[sim.ammo.kind].name+' '+Math.ceil(sim.ammo.remaining)+'s');$('buff-status').textContent=buffs.join(' · ');show('buff-status');}
   const choosing=!!sim.choice&&sim.state==='active';show('rift-banner',choosing);document.body.classList.toggle('rift-active',choosing);
-  if(choosing){const options=sim.choice.options.map(o=>POWERS[o.kind]);$('rift-kicker').textContent='CHOOSE ONE · '+Math.ceil((20-sim.choice.z)/sim.choice.speed)+'s';$('rift-options').textContent=options[0].name+'  OR  '+options[1].name;$('rift-detail').textContent=options[1].detail+' · The other reward closes.';}
+  if(choosing){const options=sim.choice.options.map(o=>POWERS[o.kind]);$('rift-kicker').textContent='CHOOSE ONE · '+Math.ceil((20-sim.choice.z)/sim.choice.speed)+'s';$('rift-options').textContent=options[0].name+'  OR  '+options[1].name;$('rift-detail').textContent=options.map(o=>o.detail).join(' / ');}
   $('kill-count').textContent=sim.kills;
   $('enemies-left').textContent=sim.enemies.length?sim.enemies.length+' enemies incoming':'Crossing secured';
   $('wave-label').innerHTML='WAVE '+String(sim.wave+1).padStart(2,'0')+' <span>/ 04</span>';
@@ -152,7 +160,7 @@ function resize(){
   camera.aspect=innerWidth/innerHeight;
   camera.fov=(portrait?54:49)+(coarsePointer.matches?clamp((740-innerHeight)/180,0,1)*(portrait?12:18):0);
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?(coarsePointer.matches?1.4:1.6):1));renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?(coarsePointer.matches?1.4:1.6):governor.scale));renderer.setSize(innerWidth,innerHeight);
 }
 function inputState(){
   return {x:(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+pointer.dx,
@@ -162,11 +170,14 @@ function inputState(){
 function frame(timestamp){
   requestAnimationFrame(frame);
   // Keep high-refresh phones near 60 renders/sec; simulation still advances in fixed steps.
-  const renderInterval=1000/60;
-  if(coarsePointer.matches&&timestamp-lastRenderTime<renderInterval-.5)return;
-  lastRenderTime=timestamp-((timestamp-lastRenderTime)%renderInterval);
+  if(coarsePointer.matches){const next=nextRenderTime(lastRenderTime,timestamp);if(next===null)return;lastRenderTime=next;}
+  const cpuStart=performance.now(),frameMs=timestamp-previousTime;
   const dt=Math.min(.1,Math.max(0,(timestamp-previousTime)/1000));previousTime=timestamp;
   const animating=sim.state==='active'||sim.state==='menu'||sim.state==='victory'||sim.state==='defeat';
+  if(governor.sample(frameMs,quality==='balanced'&&coarsePointer.matches&&sim.state==='active')){
+    const density=governor.scale===1?1:governor.scale===.9?.8:.65;
+    environment.setQuality(quality,density);effects.setQuality(quality,density);resize();
+  }
   if(animating)worldTime+=dt;
   if(sim.state==='active'&&!manualTestClock){
     accumulator+=dt;
@@ -191,8 +202,10 @@ function frame(timestamp){
   if(!reducedMotion&&shake>0){camera.position.x+=Math.sin(worldTime*97)*shake*.22;camera.position.y+=Math.cos(worldTime*79)*shake*.22;}
   hudTime+=dt;if(hudTime>=.1){hudTime%=.1;updateHud();}
   renderer.render(scene,camera);
-  frames++;frameTotal+=dt;
-  if(frameTotal>=1){metrics={fps:Math.round(frames/frameTotal),calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};frames=0;frameTotal=0;}
+  cpuTotal+=performance.now()-cpuStart;if(frameMs>0)frameSamples.push(frameMs);
+  // FPS uses actual elapsed time; the simulation's catch-up clamp must not hide hitches.
+  frames++;frameTotal+=Math.max(0,frameMs)/1000;
+  if(frameTotal>=1){frameSamples.sort((a,b)=>a-b);metrics={fps:Math.round(frames/frameTotal),calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,cpuMs:+(cpuTotal/frames).toFixed(2),frameP95Ms:+(frameSamples[Math.floor((frameSamples.length-1)*.95)]||0).toFixed(2)};frames=0;frameTotal=0;cpuTotal=0;frameSamples.length=0;}
 }
 async function boot(){
   try{
@@ -207,7 +220,7 @@ async function boot(){
     armies.update(sim,0);effects.update(sim,0,0);environment.update(0);targets.update(sim,0);
     await renderer.compileAsync(scene,camera);
     show('loading',false);show('menu');requestAnimationFrame(t=>{previousTime=t;frame(t);});
-    if(new URLSearchParams(location.search).has('test')){
+    if(testMode){
       window.__warTest={
         ready:true,snapshot:()=>({...sim.snapshot(),metrics}),
         useManualClock:()=>{manualTestClock=true;accumulator=0;},
@@ -219,7 +232,13 @@ async function boot(){
         world:()=>environment.snapshot(),
         spectacle:()=>effects.snapshot(),
         clear:()=>{for(const e of sim.enemies)sim.damage(e,e.hp+1,false);},
-        renderer:()=>({...metrics,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,quality,pixelRatio:renderer.getPixelRatio(),shadowSize:environment.sun.shadow.mapSize.x}),
+        power:kind=>{activatePower(sim,kind);processEvents();},
+        ammo:kind=>{collectSupply(sim,kind);processEvents();},
+        duel:()=>{openChoice(sim,true);processEvents();},
+        equip:(level,squad=42)=>{sim.player.weaponLevel=clamp(level,1,4);sim.player.squad=clamp(squad,1,MAX_SQUAD);sim.createArmory();},
+        stress:()=>{sim.choice=null;sim.choiceTimer=sim.podTimer=999;sim.player.x=0;sim.player.squad=42;sim.player.weaponLevel=4;sim.beginWave(3);for(const [i,e] of sim.enemies.entries()){e.x=(i%9-4)*.9;e.z=-9-Math.floor(i/9)*1.3;e.hp=e.maxHp=1e7;e.speed=0;e.attackTimer=999;}},
+        useRealtimeClock:()=>{manualTestClock=false;accumulator=0;},
+        renderer:()=>({...metrics,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,quality,adaptiveScale:governor.scale,pixelRatio:renderer.getPixelRatio(),shadowSize:environment.sun.shadow.mapSize.x}),
         controls:()=>({touch:touchMode,dragging:pointer.active,dx:pointer.dx,dz:pointer.dz,steerX:sim.steerX}),
         screenPoint:(x,y,z)=>{const p=new T.Vector3(x,y,z).project(camera);return {x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};},
       };

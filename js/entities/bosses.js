@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.6.0';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.7.0';
 
 // A few articulated hero models, separate from the instanced infantry.
 export function createBosses(scene){
@@ -77,13 +77,14 @@ export function createBosses(scene){
       if(m&&m.kind!==e.bossType){scene.remove(m.group);m.group.traverse(o=>o.material?.dispose());models.delete(e.id);m=null;}
       if(!m){m=build(e.bossType);models.set(e.id,m);}
       const dead=e.age!==undefined,size=e.scale/3.7;
-      m.group.position.set(e.x,dead?-.6*e.age:Math.sin(time*2)*.08,e.z);
-      m.group.rotation.set(dead?-Math.min(1,e.age*1.7)*Math.PI*.48:0,-(e.yaw-Math.PI),dead?e.spin*.12:0);
+      const collapse=dead?Math.max(0,Math.min(1,(e.age-.65)/1.15)):0;
+      m.group.position.set(e.x,dead?-collapse*.8-Math.max(0,e.age-2.8):Math.sin(time*2)*.08,e.z);
+      m.group.rotation.set(dead?-collapse*Math.PI*.48:0,-(e.yaw-Math.PI),dead?Math.sin(e.age*25)*Math.max(0,1-e.age)*.06+e.spin*.12*collapse:0);
       const windup=e.swing>0?1-e.swing/1.05:0,strike=e.swing<=0&&e.recovery>0?Math.sin(e.recovery/.45*Math.PI):0;
       if(!dead){m.group.rotation.x=-windup*.3+strike*.38;m.group.rotation.z=Math.sin(windup*Math.PI)*.12;m.group.rotation.y+=windup*.32-strike*.6;}
       m.group.scale.setScalar(size*(dead?Math.max(.01,1-Math.max(0,e.age-3.3)*.75):1));
-      m.armor.emissive.setHex(BOSS_TYPES[e.bossType].accent);m.armor.emissiveIntensity=(e.hit||0)*.5;
-      m.glow.emissiveIntensity=1.2+Math.sin(time*4)*.5+windup*3;
+      m.armor.emissive.setHex(BOSS_TYPES[e.bossType].accent);m.armor.emissiveIntensity=dead?Math.max(0,1-e.age/1.3)*1.5:(e.hit||0)*.5;
+      m.glow.emissiveIntensity=dead?Math.max(0,3-e.age*1.5):1.2+Math.sin(time*4)*.5+windup*3;
       if(!dead)for(const j of m.joints){if(j.wing){j.mesh.rotation.z=j.wing*(.15+Math.sin(time*2.8)*.28+windup*.5);}else if(j.tail!==undefined){j.mesh.position.x=Math.sin(time*2-j.tail*.5)*j.tail*.12;}else if(j.strike){j.mesh.rotation.x=-windup*1.5+strike*2.2;j.mesh.rotation.z=-windup*.5+strike*.65;}else if(j.sweep){j.mesh.rotation.x=-windup*1.3+strike*1.6;j.mesh.rotation.z=j.sweep*(windup*.65-strike*.85);}else if(j.spin)j.mesh.rotation.z=time*.4;else j.mesh.rotation.x=Math.sin(time*3+j.phase)*.16+windup*.4-strike*.6;}
     }
   }};

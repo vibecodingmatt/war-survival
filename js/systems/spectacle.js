@@ -1,11 +1,13 @@
 import * as T from '../../vendor/three.module.min.js';
-import { flightPose } from '../core/flight.js?v=0.6.0';
-import { POWERS } from '../../data/powers.js?v=0.6.0';
-import { createMythicEffects } from './mythic-effects.js?v=0.6.0';
+import { flightPose } from '../core/flight.js?v=0.7.0';
+import { POWERS } from '../../data/powers.js?v=0.7.0';
+import { createMythicEffects } from './mythic-effects.js?v=0.7.0';
+import { createComedy } from './comedy.js?v=0.7.0';
 
 // Persistent pools: a full screen of chain lightning still costs two draw calls.
 export function createSpectacle(scene) {
   const mythic=createMythicEffects(scene);
+  const comedy=createComedy(scene);let segmentBudget=900,shardBudget=180;
   const d=new T.Object3D(),up=new T.Vector3(0,1,0),dir=new T.Vector3(),color=new T.Color();
   const arcs=[],pulses=[],debris=[];
   const lines=new T.InstancedMesh(new T.CylinderGeometry(1,1,1,5),new T.MeshBasicMaterial({color:0xffffff,toneMapped:false}),900);
@@ -33,7 +35,7 @@ export function createSpectacle(scene) {
   const prisms=Array.from({length:4},()=>{const mesh=new T.Mesh(new T.OctahedronGeometry(.32),new T.MeshBasicMaterial({color:0xeb9dff,toneMapped:false}));mesh.scale.y=1.8;prismRoot.add(mesh);return mesh;});
   let lineCount=0;
   function segment(a,b,width,hex,intensity=1){
-    if(lineCount>=900)return;
+    if(lineCount>=segmentBudget)return;
     dir.set(b.x-a.x,b.y-a.y,b.z-a.z);const length=dir.length();if(length<.001)return;
     d.position.set((a.x+b.x)/2,(a.y+b.y)/2,(a.z+b.z)/2);d.quaternion.setFromUnitVectors(up,dir.normalize());d.scale.set(width,length,width);d.updateMatrix();
     lines.setMatrixAt(lineCount,d.matrix);color.setHex(hex).multiplyScalar(intensity);lines.setColorAt(lineCount,color);
@@ -45,10 +47,15 @@ export function createSpectacle(scene) {
     mesh.position.set(x,.3,z);mesh.rotation.set(-Math.PI/2,0,0);pulses.push({mesh,radius,age:0,life,kind});
   }
   function scatter(x,z,hex,count=20){
-    for(let i=0;i<count&&debris.length<180;i++){const angle=i*2.399+debris.length*.13,speed=2+i%5;debris.push({x,y:.4,z,vx:Math.cos(angle)*speed,vy:4+i%6,vz:Math.sin(angle)*speed,age:0,size:.05+(i%4)*.04,hex});}
+    for(let i=0;i<count&&debris.length<shardBudget;i++){const angle=i*2.399+debris.length*.13,speed=2+i%5;debris.push({x,y:.4,z,vx:Math.cos(angle)*speed,vy:4+i%6,vz:Math.sin(angle)*speed,age:0,size:.05+(i%4)*.04,hex});}
   }
   return {
+    setQuality(value,scale=1){segmentBudget=Math.round((value==='balanced'?480:900)*scale);shardBudget=Math.round((value==='balanced'?90:180)*scale);debris.length=Math.min(debris.length,shardBudget);comedy.setQuality(value,scale);},
     handle(e){
+      comedy.handle(e);
+      if(e.type==='sonicBoom')pulse(e.x,e.z,3.8,e.color,.35);
+      if(e.type==='toyImpact')scatter(e.x,e.z,0xffdc8a,3);
+      if(e.type==='explosion'&&e.power==='quack'){pulse(e.x,e.z,8,0xffde65,1);scatter(e.x,e.z,0xffe8a2,28);}
       if(e.type==='powerBeam') {if(arcs.length>=50)arcs.shift();arcs.push({...e,life:.2});}
       if(e.type==='bossSwing'){pulse(e.x,e.z,e.radius*1.3,0xffb477,.45,'slash');pulse(e.x,e.z,e.radius,0xff583c,.7);scatter(e.x,e.z,0xa9abb2,28);}
       if(e.type==='bossImpact'){pulse(e.x,e.z,6,0x83d9ff,.8);scatter(e.x,e.z,0xc7e9ff,32);}
@@ -62,9 +69,10 @@ export function createSpectacle(scene) {
       if(e.type==='powerup'){const hex=POWERS[e.kind]?.color||0x9de9cf;pulse(e.x,e.z,6,hex,1.2);scatter(e.x,e.z,hex,36);}
       if(e.type==='death'&&e.boss){pulse(e.x,e.z,15,0xffd19a,1.5);pulse(e.x,e.z,10,0xb5eaff,1);scatter(e.x,e.z,0xf7c686,50);}
     },
-    reset(){mythic.reset();arcs.length=debris.length=0;for(const p of pulses)p.mesh.visible=false;pulses.length=0;lines.count=glowLines.count=shards.count=meteors.count=0;shield.visible=droneRoot.visible=prismRoot.visible=false;},
+    reset(){comedy.reset();mythic.reset();arcs.length=debris.length=0;for(const p of pulses)p.mesh.visible=false;pulses.length=0;lines.count=glowLines.count=shards.count=meteors.count=0;shield.visible=droneRoot.visible=prismRoot.visible=false;},
     update(sim,dt,time,reduced=false){
       lineCount=0;
+      comedy.update(sim,dt,time,reduced,pulse,scatter,segment);
       mythic.update(sim,time,segment);
       for(let i=arcs.length-1;i>=0;i--){const a=arcs[i];a.life-=dt;if(a.life<=0){arcs.splice(i,1);continue;}
         let previous={x:a.x,y:a.y,z:a.z};
@@ -96,6 +104,6 @@ export function createSpectacle(scene) {
       prisms.forEach((prism,i)=>{const a=sim.time*1.3+i*Math.PI/2;prism.position.set(p.x+Math.cos(a)*3,2+Math.sin(a*2)*.5,p.z+Math.sin(a)*2.5);prism.rotation.set(a,0,a*.5);});
       lines.count=glowLines.count=lineCount;for(const mesh of [lines,glowLines]){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
     },
-    snapshot:()=>({arcs:arcs.length,shards:shards.count,meteors:meteors.count,segments:lines.count,shield:shield.visible,drones:droneRoot.visible,prism:prismRoot.visible,...mythic.snapshot()}),
+    snapshot:()=>({arcs:arcs.length,shards:shards.count,meteors:meteors.count,segments:lines.count,segmentBudget,shield:shield.visible,drones:droneRoot.visible,prism:prismRoot.visible,...mythic.snapshot(),...comedy.snapshot()}),
   };
 }

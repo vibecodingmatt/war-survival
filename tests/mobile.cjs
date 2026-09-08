@@ -17,7 +17,8 @@ async function layout(page){
  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true}),page=await context.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url());});
- await page.goto(base+'?test=1');await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});await touchCopy(page);
+ // Seed 19 is the reproducible complete campaign example; balance.mjs checks all three draws.
+ await page.goto(base+'?test=1&seed=19');await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});await touchCopy(page);
  const settings=await page.evaluate(()=>window.__warTest.renderer());assert.equal(settings.quality,'balanced');assert.equal(settings.pixelRatio,1);assert.equal(settings.shadowSize,1024);
  await page.locator('#start-button').tap();await layout(page);const cdp=await context.newCDPSession(page);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:185,y:490}]});
@@ -49,12 +50,13 @@ async function layout(page){
  await page.locator('[data-level="14"]').tap();await page.locator('#start-button').tap();let state,full=false;
  for(let i=0;i<1100;i++){
    state=await page.evaluate(()=>window.__warTest.snapshot());if(state.state!=='active')break;
-   if(state.squad===42&&!full){full=true;await page.waitForTimeout(100);await page.screenshot({path:path.join(output,'full-squad-observatory.png')});
-     await page.locator('#pause-button').tap();await page.setViewportSize({width:320,height:568});await page.evaluate(()=>window.__warTest.place(3.8,16));await page.waitForTimeout(1200);
-     const foot=await page.evaluate(()=>window.__warTest.screenPoint(3.8,0,19.5));const box=await page.locator('.squad-card').boundingBox();assert.ok(foot.y<box.y);
-     await page.evaluate(()=>window.__warTest.place(0,11));await page.setViewportSize({width:390,height:844});await page.locator('#resume-button').tap();state=await page.evaluate(()=>window.__warTest.snapshot());}
+   if(state.squad===42&&!full){full=true;await page.waitForTimeout(100);await page.screenshot({path:path.join(output,'full-squad-observatory.png')});}
    await page.evaluate(input=>window.__warTest.step(.2,input),strategy(state));
  }
  assert.equal(state.state,'victory');assert.ok(full);await touchCopy(page);await page.screenshot({path:path.join(output,'campaign-victory.png')});
+ // Framing is a separate fixture: pausing in mid-movement would change the campaign trajectory.
+ await page.locator('#replay-button').tap();await page.evaluate(()=>window.__warTest.equip(4,42));await page.locator('#pause-button').tap();
+ await page.setViewportSize({width:320,height:568});await page.evaluate(()=>window.__warTest.place(3.8,16));await page.waitForTimeout(1200);
+ const foot=await page.evaluate(()=>window.__warTest.screenPoint(3.8,0,19.5)),box=await page.locator('.squad-card').boundingBox();assert.ok(foot.y<box.y);
  assert.deepEqual(errors,[]);console.log('PASS: drag to recruit and upgrade, two-finger artillery, release, rotation, quality defaults, eight layouts with safe insets, no lane menus, and mobile Level 15 victory.');await browser.close();
 })().catch(async e=>{console.error(e);await browser?.close();process.exitCode=1;});

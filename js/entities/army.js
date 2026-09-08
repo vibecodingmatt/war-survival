@@ -1,19 +1,19 @@
 import * as T from '../../vendor/three.module.min.js';
-import { formation } from '../core/math.js?v=0.6.0';
-import { MAX_SQUAD } from '../../data/waves.js?v=0.6.0';
-import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.6.0';
-import { createBosses } from './bosses.js?v=0.6.0';
-import { flightPose } from '../core/flight.js?v=0.6.0';
+import { formation } from '../core/math.js?v=0.7.0';
+import { MAX_SQUAD } from '../../data/waves.js?v=0.7.0';
+import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.7.0';
+import { createBosses } from './bosses.js?v=0.7.0';
+import { flightPose } from '../core/flight.js?v=0.7.0';
+import { mergeRigidParts } from '../core/geometry.js?v=0.7.0';
 
-const root = new T.Object3D(), limb = new T.Object3D(), partTransform = new T.Object3D();
-const world = new T.Matrix4(), joint = new T.Matrix4(), tint = new T.Color();
+const root = new T.Object3D(), limb = new T.Object3D(), tint = new T.Color();
 const spheres = new Map();
 function sphere(x,y,z) {
   const key=[x,y,z].join(',');
-  if(!spheres.has(key)){const geometry=new T.SphereGeometry(1,12,8);geometry.scale(x,y,z);spheres.set(key,geometry);}
+  if(!spheres.has(key)){const geometry=new T.SphereGeometry(1,8,6);geometry.scale(x,y,z);spheres.set(key,geometry);}
   return spheres.get(key);
 }
-const cylinder=(top,bottom,height,segments=10)=>new T.CylinderGeometry(top,bottom,height,segments);
+const cylinder=(top,bottom,height,segments=8)=>new T.CylinderGeometry(top,bottom,height,Math.min(10,segments));
 
 function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
   const cloth = new T.MeshStandardMaterial({color: blue?0x087fd6:0xa51d31,metalness:blue?.28:.45,roughness:.4});
@@ -24,11 +24,9 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
   const leather = new T.MeshStandardMaterial({color:0x302c28,roughness:.77});
   const skin = new T.MeshStandardMaterial({color:0xd6aa7b,roughness:.72});
   const stock = new T.MeshStandardMaterial({color:0x775235,metalness:.12,roughness:.5});
-  const parts=[];
+  const parts=[],definitions=[];
   function part(geo, material, p, r=[0,0,0], limbName=null) {
-    const mesh=new T.InstancedMesh(geo,material,capacity);mesh.setColorAt(0,new T.Color(1,1,1));mesh.count=0;mesh.castShadow=true;mesh.receiveShadow=true;
-    mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.frustumCulled=false;scene.add(mesh);
-    parts.push({mesh,p,r,limbName,material});
+    definitions.push({geo,material,p,r,limbName});
   }
   // Tailored coat, curved breastplate, raised collar and riveted belt.
   part(cylinder(.35,.43,.53,12),darkCloth,[0,.93,0]);
@@ -39,7 +37,7 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
   part(cylinder(.21,.25,.06),gold,[0,1.65,0]);
   // Helmet dome, projecting rim, visor and a golden crown ridge.
   part(sphere(.245,.27,.235),skin,[0,1.79,-.02]);
-  part(new T.SphereGeometry(.31,16,10,0,Math.PI*2,0,Math.PI*.65),cloth,[0,1.86,0]);
+  part(new T.SphereGeometry(.31,10,7,0,Math.PI*2,0,Math.PI*.65),cloth,[0,1.86,0]);
   part(cylinder(.337,.337,.035,16),gold,[0,1.77,0]);
   part(new T.BoxGeometry(.33,.095,.075),darkSteel,[0,1.83,-.248]);
   part(new T.BoxGeometry(.27,.026,.078),gold,[0,1.885,-.26]);
@@ -129,7 +127,16 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
       part(sphere(.095,.095,.095),darkSteel,[.28,.99,-.24]);
     }
   }
+  const batches=new Map();
+  for(const p of definitions){const key=p.material.uuid+':'+(p.limbName||'body');if(!batches.has(key))batches.set(key,[]);batches.get(key).push(p);}
+  for(const group of batches.values()){
+    const {material,limbName}=group[0],mesh=new T.InstancedMesh(mergeRigidParts(group),material,capacity);
+    mesh.count=0;mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.setColorAt(0,new T.Color(1,1,1));scene.add(mesh);parts.push({mesh,limbName});
+  }
+  const shared=new Set(spheres.values());for(const geo of new Set(definitions.map(p=>p.geo)))if(!shared.has(geo))geo.dispose();
+  const bones=new Map([...new Set(parts.map(p=>p.limbName))].map(name=>[name,new T.Matrix4()]));
   return {
+    dispose(){const materials=new Set();for(const p of parts){scene.remove(p.mesh);p.mesh.geometry.dispose();materials.add(p.mesh.material);}for(const material of materials)material.dispose();},
     update(units,time,moving=0,recoils=null,aim=null) {
       const count=Math.min(capacity,units.length);
       for(const p of parts)p.mesh.count=count;
@@ -141,6 +148,8 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
         root.position.set(unit.x,(unit.y||0)+bob,unit.z);
         root.rotation.set(0,aim&&!dead?aim[i]||0:unit.yaw||0,0);
         root.scale.set(size*(heavy?1.16:1),size,size);
+        if(!dead&&unit.zap>0){root.rotation.z=Math.sin(time*65+i)*.14;root.position.y+=.18;}
+        if(!dead&&blue&&unit.cheer>0){root.position.y+=Math.max(0,Math.sin(unit.cheer*8+i*.55))*.25;root.rotation.z=Math.sin(unit.cheer*7+i)*.07;}
         if(dead){
           const progress=Math.min(1,age*3.1);
           root.position.y=Math.max(.1,Math.sin(Math.min(1,age/1.1)*Math.PI)*unit.lift*.45);
@@ -149,6 +158,9 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
           if(age>3.8)root.position.y-=(age-3.8)*1.7;
           root.scale.multiplyScalar(Math.max(.01,Math.min(1,(5-age)*1.3)));
           if(unit.flight){const pose=flightPose(unit);root.position.set(pose.x,pose.y,pose.z);root.rotation.set(pose.rx,pose.ry,pose.rz);}
+          if(unit.defeatStyle==='ice'){root.rotation.x=-Math.min(1,age*.7)*1.5;root.position.z-=Math.min(age,1.3)*2;}
+          if(unit.defeatStyle==='zap'&&age<.55){root.rotation.z=Math.sin(age*55)*.3;root.position.y+=Math.sin(age*8)*.5;}
+          if(unit.defeatStyle==='pancake'&&age>1.4){root.scale.y*=.23;root.scale.x*=1.6;}
         }
         if(blue&&recoils&&!dead)root.rotation.x=-recoils[i]*.045;
         if(unit.knockup){
@@ -157,24 +169,23 @@ function createArmy(scene, capacity, blue, heavy = false, weaponLevel = 1) {
           root.rotation.set(pose.rx*(1-returning),pose.ry*(1-returning),pose.rz*(1-returning));
         }
         root.updateMatrix();
-        for(const p of parts){
+        for(const [limbName,matrix] of bones){
           limb.position.set(0,0,0);limb.rotation.set(0,0,0);
-          if(p.limbName==='leftLeg'||p.limbName==='rightLeg'){
-            const sign=p.limbName==='leftLeg'?-1:1;
+          if(limbName==='leftLeg'||limbName==='rightLeg'){
+            const sign=limbName==='leftLeg'?-1:1;
             limb.position.set(sign*.19,.72,0);limb.rotation.x=sign*gait+(dead?sign*.35:0);
-          }else if(p.limbName==='rotor'){
+          }else if(limbName==='rotor'){
             limb.position.set(.23,1.4,-1.18);limb.rotation.z=time*22;
-          }else if(p.limbName){
-            limb.rotation.x=(p.limbName==='leftArm'?gait:-gait)*.2;
-            if(dead)limb.rotation.z=p.limbName==='leftArm'?-.55:.8;
+          }else if(limbName){
+            limb.rotation.x=(limbName==='leftArm'?gait:-gait)*.2;
+            if(dead)limb.rotation.z=limbName==='leftArm'?-.55:.8;
           }
           limb.updateMatrix();
-          partTransform.position.set(...p.p);partTransform.rotation.set(...p.r);partTransform.scale.set(1,1,1);partTransform.updateMatrix();
-          joint.multiplyMatrices(limb.matrix,partTransform.matrix);world.multiplyMatrices(root.matrix,joint);
-          p.mesh.setMatrixAt(i,world);
-          const flash=dead?0:(unit.hit||0)*.7;
-          tint.setRGB(1+flash*2,1+flash*1.6,1+flash*.8);p.mesh.setColorAt(i,tint);
+          matrix.multiplyMatrices(root.matrix,limb.matrix);
         }
+        const flash=dead?0:(unit.hit||0)*.7;
+        tint.setRGB(1+flash*2,1+flash*1.6,1+flash*.8);if(unit.slow>0||(dead&&unit.defeatStyle==='ice'))tint.setRGB(.6,1.25,1.5);
+        for(const p of parts){p.mesh.setMatrixAt(i,bones.get(p.limbName));p.mesh.setColorAt(i,tint);}
       }
       for(const p of parts){p.mesh.instanceMatrix.needsUpdate=true;if(p.mesh.instanceColor)p.mesh.instanceColor.needsUpdate=true;}
     },
@@ -188,10 +199,11 @@ export function createArmies(scene) {
   return {
     update(sim,time) {
       const p=sim.player;
-      for(let i=0;i<p.squad;i++){const f=formation(i,p.squad),u=blueUnits[i];u.x=p.x+f.x;u.z=p.z+f.z;u.phase=time*10+i*.8;u.knockup=sim.knockups.find(unit=>unit.index===i)||null;}
+      for(let i=0;i<p.squad;i++){const f=formation(i,p.squad),u=blueUnits[i];u.x=p.x+f.x;u.z=p.z+f.z;u.phase=time*10+i*.8;u.cheer=sim.cheer;u.knockup=sim.knockups.find(unit=>unit.index===i)||null;}
       const weapon=sim.weapon;
       if(!squads.has(weapon.id))squads.set(weapon.id,createArmy(scene,MAX_SQUAD*2,true,false,weapon.model));
       for(const [id,squad] of squads){
+        if(id!==weapon.id&&!sim.fallen.some(soldier=>soldier.weaponId===id)){squad.dispose();squads.delete(id);continue;}
         const units=id===weapon.id?blueUnits.slice(0,p.squad):[];
         units.push(...sim.fallen.filter(soldier=>(soldier.weaponId||'rifle')===id));
         squad.update(units,time,Math.hypot(p.vx,p.vz),sim.recoil,sim.aim);

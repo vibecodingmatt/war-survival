@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { POWERS } from '../../data/powers.js?v=0.6.0';
+import { POWERS } from '../../data/powers.js?v=0.7.0';
 
 export function createChoiceTargets(scene) {
   const root=new T.Group();scene.add(root);root.visible=false;
@@ -30,6 +30,8 @@ export function createChoiceTargets(scene) {
     else if(spec.symbol==='prism'){c.beginPath();c.moveTo(0,-45);c.lineTo(40,31);c.lineTo(-40,31);c.closePath();c.stroke();c.beginPath();c.moveTo(-60,0);c.lineTo(0,0);c.stroke();for(let i=0;i<3;i++){c.beginPath();c.moveTo(0,0);c.lineTo(62,(i-1)*22);c.stroke();}}
     else if(spec.symbol==='vortex'){for(let j=0;j<3;j++){c.beginPath();for(let i=0;i<40;i++){const a=i*.14+j*2.094,r=6+i;const x=Math.cos(a)*r,y=Math.sin(a)*r;if(!i)c.moveTo(x,y);else c.lineTo(x,y);}c.stroke();}c.beginPath();c.arc(0,0,9,0,Math.PI*2);c.fill();}
     else if(spec.symbol==='phoenix'){c.beginPath();c.moveTo(0,35);c.lineTo(-55,-25);c.lineTo(-40,16);c.lineTo(-15,25);c.lineTo(0,-35);c.lineTo(15,25);c.lineTo(40,16);c.lineTo(55,-25);c.closePath();c.fill();}
+    else if(spec.symbol==='duck'){c.beginPath();c.ellipse(0,16,47,28,0,0,Math.PI*2);c.fill();c.beginPath();c.arc(20,-16,25,0,Math.PI*2);c.fill();c.fillStyle='#ff9751';c.fillRect(36,-16,26,13);c.fillStyle='#172743';c.beginPath();c.arc(25,-23,4,0,Math.PI*2);c.fill();}
+    else if(spec.symbol==='tank'){c.fillRect(-47,4,94,32);c.fillRect(-27,-18,51,29);c.fillRect(12,-13,52,9);c.lineWidth=5;c.strokeRect(-51,39,102,10);c.fillRect(-3,-42,6,25);c.beginPath();c.ellipse(-12,-44,12,8,0,0,Math.PI*2);c.ellipse(12,-44,12,8,0,0,Math.PI*2);c.stroke();}
     else if(spec.symbol==='shield'){c.beginPath();c.moveTo(-37,-36);c.lineTo(37,-36);c.lineTo(29,19);c.lineTo(0,48);c.lineTo(-29,19);c.closePath();c.stroke();c.fillRect(-4,-19,8,42);c.fillRect(-20,-2,40,8);}
     else for(let i=0;i<3;i++){const x=(i-1)*35;c.beginPath();c.arc(x,-16,12,0,Math.PI*2);c.fill();c.fillRect(x-13,2,26,32);}
     c.restore();c.fillStyle='#dce9f5';c.font='bold 22px Arial';

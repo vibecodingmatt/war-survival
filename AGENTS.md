@@ -1,0 +1,57 @@
+# War: Survival handoff
+
+Read `README.md` for the player rules and `docs/visual-combat-guide.md` for the
+rendering architecture, effect budgets, test fixtures and v0.7 changes.
+`docs/balance.md` records the measured campaign outcomes. This is a standalone Git
+repository inside `games-playground`; run Git and npm from this directory.
+
+## Start here
+
+- Static ES modules, vendored Three.js, no build step or runtime CDN.
+- `npm ci`, then `npm start`; play at `http://127.0.0.1:4173/war-survival/`.
+- Browser tests require Chrome. `CHROME_PATH`, `PLAYWRIGHT_MODULE`, and `TEST_URL`
+  can point at an existing installation/server. See `package.json` for commands.
+- On Windows, a Node `EPERM` resolving `C:\Users\burns` can be a sandbox issue;
+  it is not a game failure. Use the execution tool's normal escalation workflow.
+- If port 4173 is occupied, check whether the existing server serves this game
+  before starting another. Do not terminate unrelated processes.
+- No backend, account, online multiplayer, or save server. Progress is the
+  `war_survival_campaign_v1` cookie; preserve its bitmask migration rules.
+
+## Implementation invariants
+
+- Simulation and cosmetic animation have separate clocks and random sources.
+  Gameplay lives in `js/core/`; rendering must not award damage or rewards.
+- Combat ticks at 60 Hz, with at most 360 live projectiles and 42 squad members.
+  Quality changes never alter damage, enemy count, controls, or red warning zones.
+- Left recruits, center fights/shoots pods, right upgrades. Side-lane reward shots
+  never gain extra projectiles or splash from temporary ammunition.
+- Rift rewards are exclusive: invalidate both targets before granting one.
+  Choices pause ordinary recruit/weapon boards while retaining their progress.
+- Ammo uses one replaceable timed slot. Major rifts and support buffs can coexist;
+  all temporary effects reset on replay/next sector and freeze on pause.
+- Add scenery under the active biome root so sector changes dispose it. Keep
+  focal objects outside the bridge (`|x| > 7.6`). Check portrait composition too.
+- Batch repeated rigid geometry by material and animated joint. Avoid per-shot
+  meshes, per-enemy lights, unbounded particles and frame-by-frame canvas uploads.
+- Keep live state behind `?test=1` instrumentation. Production has no debug global.
+- Bump all local browser module/style release queries together for a release;
+  do not add a bundler solely for cache busting.
+
+## Verification by change
+
+- Gameplay/rewards: `npm test`, `npm run test:balance` (180 deterministic runs).
+  Investigate failed seeds; do not weaken the assertions to hide regressions.
+- Visuals/effects: `npm run test:polish` checks every world, ammo and power visuals,
+  simultaneous effects, cleanup, pause and reduced motion. Inspect its screenshots.
+- Controls/HUD: `npm run test:browser`, `npm run test:mobile`.
+- End-to-end: `npm run test:campaign`; use `test:fun` to earn all seven powers
+  through actual lane shooting, and `test:expansion` for old-save expansion checks.
+- Avoid concurrent browser suites when collecting performance measurements.
+  Screenshots, traces and JSON reports belong in ignored `test-results/`.
+- Chrome emulation validates layout and desktop-host cost; physical iOS/Android
+  GPU performance still needs device testing. Record the distinction in reports.
+
+The v0.7 release passed the full readiness review on 2026-09-08. The Pages source
+is the repository root on `main`. Check the remote and release queries before
+shipping, and verify the public site after the Pages deployment completes.

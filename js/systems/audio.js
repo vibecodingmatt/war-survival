@@ -39,11 +39,16 @@ export class BattlefieldAudio {
     if(!this.ctx||!this.enabled)return;
     const now=this.ctx.currentTime;
     if(e.type==='shot'&&now-this.lastShot>.047){
-      this.lastShot=now;const energy=['frost','arc','rail','sun'].includes(e.weaponId),cannon=e.weaponLevel===4;
-      this.noiseHit(cannon?.2:.1,cannon?.25:.16,energy?1900:e.weaponId==='flame'?900:e.weaponLevel===3?4700:3300);
-      this.tone(energy?(e.weaponId==='arc'?520:340):cannon?85:125,cannon?.17:.09,energy?.045:.08,energy?'sine':'triangle');
+      this.lastShot=now;const energy=['frost','arc','rail','sun'].includes(e.weaponId),sonic=e.pattern==='pulse',cannon=e.weaponLevel===4;
+      this.noiseHit(sonic?.22:cannon?.2:.1,cannon?.25:.16,sonic?550:e.pattern==='fanfire'?4500:energy?1900:e.weaponId==='flame'?900:e.weaponLevel===3?4700:3300);
+      this.tone(sonic?95:e.pattern==='helix'?620:e.pattern==='jackpot'?460:energy?(e.weaponId==='arc'?520:340):cannon?85:125,sonic?.26:cannon?.17:.09,energy?.045:.08,energy||sonic?'sine':'triangle');
     }
-    if(e.type==='explosion'){this.noiseHit(.7,.6,1800);this.tone(78,.5,.35);}
+    if(e.type==='explosion'&&now-(this.lastBlast||0)>.075){this.lastBlast=now;this.noiseHit(.7,.6,1800);this.tone(78,.5,.35);}
+    if(e.type==='explosion'&&e.power==='quack'){this.tone(380,.2,.13,'sawtooth');this.tone(510,.26,.085,'triangle');}
+    if(e.type==='tankRun'){this.tone(420,.3,.08,'square');this.tone(210,.45,.07,'triangle');}
+    if(e.type==='duckDrop')this.tone(780,.55,.055,'triangle');
+    if(e.type==='death'&&e.boss){this.noiseHit(1.3,.4,1400);this.tone(65,1.5,.2);this.tone(660,1.8,.08);this.tone(990,2,.04);}
+    if(e.type==='powerup'&&e.kind==='jackpot'){this.tone(1046,1,.11);this.tone(1318,1.2,.075);this.tone(1568,1.4,.055);}
     if(e.type==='hurt'){this.tone(150,.19,.22,'triangle');this.noiseHit(.17,.12,700);}
     if(e.type==='wave'){this.tone(220,1.1,.09,'triangle');this.tone(330,.9,.05);}
     if(e.type==='recruit'){this.tone(660,.16,.065);this.tone(880,.22,.04);}

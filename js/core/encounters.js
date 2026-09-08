@@ -1,5 +1,5 @@
-import { POWERS, POWER_DECK } from '../../data/powers.js?v=0.6.0';
-import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.6.0';
+import { POWERS, POWER_DECK } from '../../data/powers.js?v=0.7.0';
+import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.7.0';
 
 export function nextPower(sim) {
   if(!sim.powerBag.length){
@@ -25,7 +25,7 @@ export function updateChoices(sim,dt) {
   const choice=sim.choice;
   if(!choice){
     sim.choiceTimer-=dt;
-    if(sim.choiceTimer<=0&&sim.enemies.length)openChoice(sim);
+    if(sim.choiceTimer<=0&&sim.enemies.length)openChoice(sim,sim.choiceCount%3===2);
     return;
   }
   choice.age+=dt;choice.z+=dt*choice.speed;
@@ -83,6 +83,7 @@ export function fling(enemy,x,z,strength=1) {
 
 export function updatePowers(sim,dt) {
   updateMythicPowers(sim,dt);
+  updateToyPowers(sim,dt);
   for(const kind of ['starfall','tesla']){
     if(sim.buffs[kind]<=0)continue;
     sim.powerTimers[kind]-=dt;if(sim.powerTimers[kind]>0)continue;
@@ -106,6 +107,35 @@ export function updatePowers(sim,dt) {
       }
     }
   }
+}
+
+function updateToyPowers(sim,dt){
+  for(const kind of ['quack','stampede']){
+    if(sim.buffs[kind]<=0)continue;
+    sim.powerTimers[kind]-=dt;if(sim.powerTimers[kind]>0)continue;
+    let front=null;
+    for(const e of sim.enemies)if(e.hp>0&&e.z<sim.player.z+4&&(!front||e.z>front.z))front=e;
+    if(!front)continue;
+    sim.powerTimers[kind]=kind==='quack'?2.2:2.65;
+    if(kind==='quack'){
+      const fuse=.95;sim.zones.push({id:sim.nextId++,x:front.x*.55,z:front.z+1,radius:5.2,remaining:fuse,total:fuse,friendly:true,damage:760+sim.level*32,power:'quack'});
+      sim.events.push({type:'duckDrop',x:front.x*.55,z:front.z});
+    }else{
+      for(let i=0;i<3;i++)sim.toyTanks.push({id:sim.nextId++,x:(i-1)*3.4,z:sim.player.z+5+i*.7,age:0,hits:new Set()});
+      sim.events.push({type:'tankRun',x:sim.player.x,z:sim.player.z});
+    }
+  }
+  if(sim.buffs.stampede<=0){sim.toyTanks.length=0;return;}
+  for(const tank of sim.toyTanks){
+    const oldZ=tank.z;tank.z-=dt*26;tank.age+=dt;
+    for(const e of sim.enemies){
+      if(e.hp<=0||tank.hits.has(e.id)||Math.abs(e.x-tank.x)>2.5+(e.type==='boss'?e.scale*.5:0)||e.z<tank.z-1.5||e.z>oldZ+1.5)continue;
+      tank.hits.add(e.id);sim.damage(e,(250+sim.level*18)*(e.type==='boss'?.8:1),true);
+      if(e.type!=='boss'){e.defeatStyle='pancake';if(e.hp<=0)fling(e,tank.x,tank.z,.8);}
+      sim.events.push({type:'toyImpact',x:e.x,z:e.z});
+    }
+  }
+  sim.toyTanks=sim.toyTanks.filter(tank=>tank.age<2.8&&tank.z>-64);
 }
 
 function updateMythicPowers(sim,dt){

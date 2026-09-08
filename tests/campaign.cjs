@@ -10,7 +10,8 @@ let browser;
  const first=Number(process.env.FIRST_LEVEL||1)-1;
  if(first)await context.addCookies([{name:'war_survival_campaign_v1',value:((1<<first)-1).toString(16),url:base}]);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url());});
- await page.goto(base+'?test=1');await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});
+ // The expansion deliberately allows failed seeds; multi-seed thresholds live in balance.mjs.
+ await page.goto(base+'?test=1&seed=19');await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});
  await page.evaluate(()=>window.__warTest.useManualClock());
  assert.equal(await page.locator('[data-level]').count(),15);
  assert.equal(await page.locator('.lane-controls,.armory-hud,#control-hint').count(),0,'no persistent lane panels remain');

@@ -12,8 +12,11 @@ export function strategy(s, mode = 'balanced') {
     if(mode!=='recruits'&&mode!=='none'&&s.weaponLevel<weaponGoal&&s.armory&&s.armory.remaining<s.armory.hp/damagePerSecond+4)lane='weapons';
   }
   if(s.choice&&mode.startsWith('balanced')&&s.nearestEnemy<s.z-6){
-    const left=s.choice.options[0];
-    lane=left.kind==='reinforce'&&s.squad<soldierGoal?'recruits':left.kind==='aegis'&&s.health<55&&s.shield<15?'recruits':'weapons';
+    const [left,right]=s.choice.options;
+    // Avoid spending an entire rift on one or two recruits; compare both powers in a duel.
+    const needSoldiers=s.squad<=soldierGoal-3;
+    const powerValue=kind=>({starfall:9,quack:8,gravity:7,stampede:6,prism:s.weaponLevel>=3?8:4,tesla:5,phoenix:s.health<80?12:7}[kind]||0)-(s.buffs?.[kind]>3?5:0);
+    lane=left.kind==='reinforce'?(needSoldiers?'recruits':'weapons'):left.kind==='aegis'?(s.health<55&&s.shield<15?'recruits':'weapons'):powerValue(left.kind)>powerValue(right.kind)?'recruits':'weapons';
   }
   const x = lane === 'recruits' ? -3.8 : lane === 'weapons' ? 3.8 : 0;
   const lateral=mode.startsWith('balanced')?[-1.8,1.8,-3.8,3.8]:[-1.8,1.8];

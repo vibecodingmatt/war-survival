@@ -1,7 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.6.0';
-import { createSpectacle } from './spectacle.js?v=0.6.0';
-const d=new T.Object3D(),direction=new T.Vector3(),up=new T.Vector3(0,1,0),color=new T.Color();
+import { randomSource } from '../core/math.js?v=0.7.0';
+import { createSpectacle } from './spectacle.js?v=0.7.0';
+import { createProjectiles } from './projectiles.js?v=0.7.0';
+const d=new T.Object3D(),color=new T.Color();
 function glowTexture(){
   const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
   const g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'#fff');g.addColorStop(.2,'#ffffffbb');g.addColorStop(1,'#ffffff00');
@@ -9,13 +10,14 @@ function glowTexture(){
 }
 export function createEffects(scene) {
   const spectacle=createSpectacle(scene);
-  const random=randomSource(491),particles=[],smoke=[],rings=[],scorches=[],beams=[];
+  const projectiles=createProjectiles(scene);let particleBudget=900,smokeBudget=250,balanced=false,detailScale=1;
+  const random=randomSource(491),particles=[],smoke=[],rings=[],scorches=[];
   const glow=glowTexture();
   const sparkMesh=new T.InstancedMesh(new T.SphereGeometry(1,5,4),new T.MeshBasicMaterial({color:0xffffff,transparent:true,blending:T.AdditiveBlending,depthWrite:false}),900);
   const smokeMesh=new T.InstancedMesh(new T.PlaneGeometry(2,2),new T.MeshBasicMaterial({map:glow,color:0xffffff,transparent:true,opacity:.55,depthWrite:false}),250);
-  const bulletMesh=new T.InstancedMesh(new T.CylinderGeometry(.035,.06,1,5),new T.MeshBasicMaterial({color:0xffffff}),360);
-  const bulletGlow=new T.InstancedMesh(new T.CylinderGeometry(.09,.11,1,5),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.24,blending:T.AdditiveBlending,depthWrite:false}),360);
-  for(const mesh of [sparkMesh,smokeMesh,bulletMesh,bulletGlow]){mesh.count=0;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(mesh);}
+  for(const mesh of [sparkMesh,smokeMesh]){mesh.count=0;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(mesh);}
+  const ringGeometry=new T.RingGeometry(.88,1,32);
+  const ringPool=Array.from({length:24},()=>{const mesh=new T.Mesh(ringGeometry,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,depthWrite:false,blending:T.AdditiveBlending}));mesh.rotation.x=-Math.PI/2;mesh.visible=false;scene.add(mesh);return mesh;});
   const squadRing=new T.Mesh(new T.RingGeometry(1.95,2.01,64),new T.MeshBasicMaterial({color:0x61d7f2,transparent:true,opacity:.6,depthWrite:false}));
   squadRing.rotation.x=-Math.PI/2;scene.add(squadRing);
   const squadGlow=new T.Mesh(new T.PlaneGeometry(5.8,5.8),new T.MeshBasicMaterial({map:glow,color:0x2494dc,transparent:true,opacity:.13,depthWrite:false,blending:T.AdditiveBlending}));
@@ -25,22 +27,23 @@ export function createEffects(scene) {
   const blastLight=new T.PointLight(0xffa548,0,17,2);scene.add(blastLight);
   let shotLife=0,blastLife=0;
   function spark(x,y,z,vx,vy,vz,size,life,hex){
-    if(particles.length>=900)return;
+    if(particles.length>=particleBudget)return;
     particles.push({x,y,z,vx,vy,vz,size,life,maxLife:life,color:new T.Color(hex)});
   }
   function burst(x,y,z,count,power=1,hex=0xffb74d){
+    count=Math.ceil(count*(balanced?.55:1)*detailScale);
     for(let i=0;i<count;i++){const a=random()*Math.PI*2,s=(1+random()*5)*power;
       spark(x,y,z,Math.cos(a)*s,(1+random()*5)*power,Math.sin(a)*s,.025+random()*.065,.2+random()*.5,random()>.65?0xffecc5:hex);}
   }
   function puff(x,y,z,count,power=1) {
-    for(let i=0;i<count&&smoke.length<250;i++)smoke.push({x:x+(random()-.5)*power,y:y+random()*.3,z:z+(random()-.5)*power,
+    count=Math.ceil(count*(balanced?.5:1)*detailScale);
+    for(let i=0;i<count&&smoke.length<smokeBudget;i++)smoke.push({x:x+(random()-.5)*power,y:y+random()*.3,z:z+(random()-.5)*power,
       vx:(random()-.5)*power*2,vy:(.7+random())*power,vz:(random()-.5)*power*2,
       size:(.15+random()*.35)*power,life:.65+random()*.8,maxLife:1.45,color:new T.Color().setHSL(.105,.09,.18+random()*.22)});
   }
   function ring(x,z,radius,hex,life=.6){
-    if(rings.length>=32)return;
-    const mesh=new T.Mesh(new T.RingGeometry(.88,1,48),new T.MeshBasicMaterial({color:hex,transparent:true,opacity:.8,depthWrite:false,blending:T.AdditiveBlending}));
-    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,.16,z);scene.add(mesh);rings.push({mesh,age:0,life,radius});
+    const mesh=ringPool.find(m=>!m.visible);if(!mesh)return;
+    mesh.visible=true;mesh.material.color.setHex(hex);mesh.position.set(x,.16,z);rings.push({mesh,age:0,life,radius});
   }
   function scorch(x,z,radius){
     const mesh=new T.Mesh(new T.PlaneGeometry(radius*2,radius*2),new T.MeshBasicMaterial({map:glow,color:0x201e18,transparent:true,opacity:.58,depthWrite:false}));
@@ -49,14 +52,12 @@ export function createEffects(scene) {
   }
   function handle(event) {
     spectacle.handle(event);
-    if(event.type==='beam'&&beams.length<70){
-      const geometry=new T.BufferGeometry().setFromPoints([new T.Vector3(event.x,event.y,event.z),new T.Vector3((event.x+event.tx)/2+.25,(event.y+event.ty)/2+.3,(event.z+event.tz)/2),new T.Vector3(event.tx,event.ty,event.tz)]);
-      const mesh=new T.Line(geometry,new T.LineBasicMaterial({color:event.color,transparent:true,opacity:.9,blending:T.AdditiveBlending}));scene.add(mesh);beams.push({mesh,life:.13});
-    }
+    if(event.type==='beam')spectacle.handle({...event,type:'powerBeam'});
     if(event.type==='powerup'){burst(event.x,1,event.z,42,1.2,0x9eeedb);ring(event.x,event.z,5,0xa4ffdf,1);}
     if(event.type==='shot'){
+      if(balanced&&event.index%2)return;
       const dx=-Math.sin(event.yaw),dz=-Math.cos(event.yaw);
-      for(let i=0;i<4;i++)spark(event.x,event.y,event.z,dx*(3+random()*5)+(random()-.5),random()*1.4,dz*(3+random()*5),.07+random()*.07,.06+random()*.05,event.color||0xffd779);
+      for(let i=0;i<(balanced?2:4);i++)spark(event.x,event.y,event.z,dx*(3+random()*5)+(random()-.5),random()*1.4,dz*(3+random()*5),(.06+event.weaponLevel*.02)+random()*.07,.06+random()*.05,event.color||0xffd779);
       if(random()>.55)puff(event.x,event.y,event.z,1,.24);
       shotLight.position.set(event.x,event.y+.2,event.z);shotLife=.05;
     }
@@ -99,31 +100,21 @@ export function createEffects(scene) {
   function removeGroup(group){scene.remove(group);group.traverse(o=>{o.geometry?.dispose();if(o.material)o.material.dispose();});}
   return {
     handle,
-    reset(){spectacle.reset();particles.length=0;smoke.length=0;for(const r of rings){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();}rings.length=0;
-      for(const b of beams){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();}beams.length=0;
+    setQuality(value,scale=1){balanced=value==='balanced';detailScale=scale;particleBudget=Math.round((balanced?420:900)*scale);smokeBudget=Math.round((balanced?90:250)*scale);particles.length=Math.min(particles.length,particleBudget);smoke.length=Math.min(smoke.length,smokeBudget);spectacle.setQuality(value,scale);projectiles.setQuality(value,scale);},
+    reset(){spectacle.reset();projectiles.reset();particles.length=0;smoke.length=0;sparkMesh.count=smokeMesh.count=0;for(const r of rings)r.mesh.visible=false;rings.length=0;
       for(const s of scorches){scene.remove(s);s.geometry.dispose();s.material.dispose();}scorches.length=0;
       for(const v of zoneVisuals.values())removeGroup(v.group);zoneVisuals.clear();shotLife=blastLife=0;},
-    snapshot:()=>spectacle.snapshot(),
+    snapshot:()=>({...spectacle.snapshot(),...projectiles.snapshot(),particles:particles.length,smoke:smoke.length,particleBudget,smokeBudget}),
     update(sim,dt,time,camera,reduced=false){
       spectacle.update(sim,dt,time,reduced);
-      for(let i=beams.length-1;i>=0;i--){const b=beams[i];b.life-=dt;b.mesh.material.opacity=Math.max(0,b.life*7);if(b.life<=0){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();beams.splice(i,1);}}
       drawParticles(sparkMesh,particles,dt,11,camera);drawParticles(smokeMesh,smoke,dt,-.1,camera);
       shotLife=Math.max(0,shotLife-dt);blastLife=Math.max(0,blastLife-dt);
       shotLight.intensity=shotLife*130;blastLight.intensity=blastLife*140;
       for(let i=rings.length-1;i>=0;i--){const r=rings[i];r.age+=dt;const t=r.age/r.life;
-        if(t>=1){scene.remove(r.mesh);r.mesh.geometry.dispose();r.mesh.material.dispose();rings.splice(i,1);continue;}
+        if(t>=1){r.mesh.visible=false;rings.splice(i,1);continue;}
         r.mesh.scale.setScalar(.4+r.radius*t);r.mesh.material.opacity=(1-t)*.7;
       }
-      const bullets=sim.bullets;bulletMesh.count=bulletGlow.count=Math.min(360,bullets.length);
-      for(let i=0;i<bulletMesh.count;i++){
-        const b=bullets[i];direction.set(b.tx-b.x,b.ty-b.y,b.tz-b.z).normalize();
-        const width=b.prism?3:b.weaponLevel===4?2.8:1;
-        d.position.set(b.x,b.y,b.z);d.quaternion.setFromUnitVectors(up,direction);d.scale.set(width,b.prism?2.4:b.weaponLevel===3?1.65:1.25,width);d.updateMatrix();
-        bulletMesh.setMatrixAt(i,d.matrix);bulletGlow.setMatrixAt(i,d.matrix);
-        color.setHex(b.color||0xffdf94);bulletMesh.setColorAt(i,color);bulletGlow.setColorAt(i,color);
-      }
-      bulletMesh.instanceMatrix.needsUpdate=true;bulletGlow.instanceMatrix.needsUpdate=true;
-      if(bulletMesh.instanceColor)bulletMesh.instanceColor.needsUpdate=true;if(bulletGlow.instanceColor)bulletGlow.instanceColor.needsUpdate=true;
+      projectiles.update(sim,time);
       squadRing.position.set(sim.player.x,.16,sim.player.z+.7);
       squadRing.scale.set(1+Math.max(0,sim.player.squad-12)*.011,1+Math.max(0,sim.player.squad-9)*.027,1);
       squadGlow.position.copy(squadRing.position);squadGlow.position.y=.15;

@@ -1,5 +1,9 @@
 # Ashen Crossing: reference and first-playable scope
 
+> Historical first-playable notes. The game now has fifteen sectors. Use
+> [README](../README.md) and the [current implementation guide](visual-combat-guide.md)
+> for present behavior, architecture, and tests.
+
 ## Reference observations
 
 The supplied local video is `references/gameplay/war-survival.mp4`, approximately

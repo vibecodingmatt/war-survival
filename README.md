@@ -1,6 +1,6 @@
 # War: Survival
 
-**The Borderlands Campaign · v0.6.0**
+**Living Worlds & Toybox Arsenal · v0.7.0**
 
 A browser squad survival game with fifteen short, escalating levels. Recruit soldiers,
 catch moving weapon upgrades, and defeat each sector's guardian. Every level starts
@@ -70,7 +70,7 @@ openings, identified in the sector description:
 - **Armory Rush:** the first moving weapon goal starts closer and costs 30% less; recruits follow.
 - **Power Duel:** choose between two different fantasy powers; only one can be claimed.
 
-Each deployment shuffles a separate five-power reward bag. Every power appears
+Each deployment shuffles a separate seven-power reward bag. Every power appears
 before the bag refills, with no consecutive duplicate draws. Pausing preserves the
 draws and timers. Replaying rolls a new seed. Ordinary side-lane controls remain
 consistent after the opening, and the existing equipment routes still apply.
@@ -92,11 +92,13 @@ or explosive splash. Routes are fixed per sector in this iteration.
   sectors can offer the second upgrade during the first wave.
 - **Supply pods, from sector 3:** shoot the center-lane crate for Overdrive
   (faster shooting for nine seconds), Aegis (30 shield, capped at 50), Rally
-  (double recruits for twelve seconds), or Field Repair (+20 integrity).
+  (double recruits for twelve seconds), Field Repair (+20 integrity), or one of
+  five temporary ammunition modes. Pods now draw from their own shuffled bag.
 - **Explosive carts, from sector 3:** shooting a red powder cart blasts nearby
   enemies and can start a chain reaction. Friendly artillery also detonates carts.
 
-**Rift choices arrive in every sector.** Outside opening power duels, the linked cards offer
+**Rift choices arrive in every sector.** Every third recurring pair is a power duel.
+Other linked cards offer
 +6 soldiers on the left, a temporary power on the right. Hold fire on one for a
 short volley to claim it; its partner closes immediately. A full squad gets a
 +35 Aegis shield alternative (capped at 60). The cards have an opening grace period
@@ -110,6 +112,25 @@ then return with their progress intact. The center lane remains dangerous.
 | Prism Overload · 8 seconds | Enhanced shots ricochet through three nearby enemies; your permanent gun stays equipped |
 | Gravity Well · 8 seconds | Pulls infantry into a damaging vortex, then detonates a final nova; bosses resist the pull |
 | Phoenix Pact · 10 seconds | Restores 12 integrity and sends a fiery bird on repeated strafing runs; lethal damage consumes the pact to restore 35 integrity and up to six soldiers once |
+| Quack Attack · 8 seconds | Giant rubber ducks drop onto enemy packs, honk, bounce, and send flattened troops tumbling |
+| Toy Tanks · 10 seconds | Three lanes of tiny wind-up tanks barrel through the ranks, spinning their keys and bowling over infantry |
+
+Temporary ammunition changes your current gun without replacing its permanent
+upgrade. A new ammunition pickup replaces the previous mode; support boosts and
+rift powers can stack with it.
+
+| Ammo pod | Effect |
+| --- | --- |
+| Fanfare · 9 seconds | Three-round fan volleys spread across nearby enemies |
+| Double Helix · 9 seconds | Twin corkscrewing projectiles with a quicker cadence |
+| Pinball · 9 seconds | Four successive ricochets through nearby enemies |
+| Boom Box · 9 seconds | Slower, oversized sonic shells with heavy splash damage |
+| Rainbow Rush · 7 seconds | A rare gold jackpot pod unleashes multicolor fire at roughly triple speed |
+
+The 13-pod shuffle bag contains each ammo mode once and each support reward twice.
+Weapon tiers also change shot size, muzzle punch and trails. Ice shards, spinning
+energy cores, rocket silhouettes, long rail streaks and billowing fire make the
+ten weapons easier to distinguish during a fight.
 
 Unshielded guardian swipes launch roughly 16% of the squad; champion swipes launch
 10%, rounded up. Damage determines casualties, while other thrown soldiers stop
@@ -125,13 +146,18 @@ force an under-equipped squad straight into the champion wave.
 
 Artillery reloads in 14 seconds. Clearing a wave restores 10 integrity. Every eight
 unshielded damage costs a soldier, down to the last survivor; zero integrity loses
-the level. Fallen soldiers and defeated bosses animate on the bridge. All weapons,
+the level. Helmets pop off, casings bounce, frozen enemies skid, stunned survivors
+see dizzy stars, and the squad celebrates upgrades and cleared waves. Bosses
+stagger, throw their crowns, topple and release a staged burst of energy and debris.
+All weapons,
 supplies, health, and buffs reset when restarting or moving to a new level.
 
 ## Mobile and rendering
 
 Touch devices show no keyboard instructions, default to Balanced graphics (pixel
-ratio 1 and 1024px shadows), and target 60 renders per second. Combat advances at a
+ratio 1 and 1024px shadows), and target 60 renders per second. Sustained slow frames
+gradually reduce Balanced resolution to a floor of 0.8 and trim cosmetic effects;
+headroom gradually restores them. Combat advances at a
 fixed 60Hz. Drag input includes a small jitter dead zone. Rotation pauses combat
 and releases movement; browser toolbar height changes do not pause it. High graphics
 is available in the pause menu. Reduced motion suppresses lightning flashes and
@@ -139,9 +165,14 @@ camera shake, and softens ambient movement.
 
 Waterfalls follow rocky stream beds over curved, irregular lips into foam and spray.
 The caldera adds tumbling ash, rising embers, lava channels and expanding soot clouds.
-Scenery uses bundled textures, instanced geometry, animated water, soft mist,
+Every sector has additional animated gardens, wildlife and flowing light details,
+from orchid banks and waterfall rainbows to spirit koi, storm vortices, lava
+fountains, festival kites and comet migrations. Nearby themed focal points keep
+the scenery visible in portrait. Scenery uses bundled textures, instanced geometry, animated water, soft mist,
 wind-driven foliage, and bounded weather particles. Sector scenery is disposed when
-switching worlds; weapon models are cached as they are encountered. There is no
+switching worlds; inactive weapon models are released after their fallen soldiers
+finish animating. Soldier armor is batched by material and joint; effects use
+bounded pools and distant scenery updates less often on Balanced. There is no
 runtime CDN, backend, account, installation, or asset-generation service.
 
 ## Development and verification
@@ -152,12 +183,13 @@ open **http://127.0.0.1:4173/war-survival/**. Opening the HTML directly is not s
 ```sh
 npm test
 npm run test:balance
-npm install
+npm ci
 npm run test:browser
 npm run test:mobile
 npm run test:campaign
 npm run test:fun
 npm run test:expansion
+npm run test:polish
 ```
 
 Browser checks require Chrome and a running server. Set `CHROME_PATH` for another
@@ -169,7 +201,9 @@ Checks cover fifteen-sector pressure, exclusive lane targeting, supply expiratio
 casualties, weapon effects, boosts, cart explosions, boss attacks, multi-seed balance,
 exclusive rift rewards, power expiry, percentage launches and airborne recovery,
 keyboard/mouse input, next-level progression, saved completion, eight touch layouts,
-multi-touch artillery, and full campaign playthroughs. Mobile coverage uses Chrome
+multi-touch artillery, full campaign playthroughs, all five ammo modes, seven earned
+rift powers, resource cleanup, reduced motion and simultaneous-power stress.
+Mobile coverage uses Chrome
 emulation; physical iOS/Android performance has not been benchmarked.
 
 Main files: `data/campaign.js` defines world palettes, bosses, and weapon routes;
@@ -185,4 +219,6 @@ Jekyll processing. Paths work beneath `/war-survival/`; changed browser modules 
 a release query to prevent stale files from mixing after an update. Reference
 videos, dependencies, logs, and screenshots are excluded from Git.
 
-See [asset credits](docs/credits.md) and [balance notes](docs/balance.md).
+Start maintenance with [AGENTS.md](AGENTS.md) and the
+[visual/combat guide](docs/visual-combat-guide.md). See also
+[asset credits](docs/credits.md) and [balance notes](docs/balance.md).

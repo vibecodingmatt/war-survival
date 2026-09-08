@@ -3,12 +3,15 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright-core');
 const base=process.env.TEST_URL||'http://127.0.0.1:4173/war-survival/',output=path.resolve('test-results/fun');fs.mkdirSync(output,{recursive:true});let browser;
 (async()=>{
  const {strategy}=await import('./strategy.mjs'),{POWER_DECK}=await import('../data/powers.js');
+ const {Simulation}=await import('../js/core/simulation.js'),{nextPower}=await import('../js/core/encounters.js');
+ // Pick reproducible seeds whose first normal rift collectively covers the whole deck.
+ const examples=new Map();for(let seed=1;seed<1000&&examples.size<POWER_DECK.length;seed++){const s=new Simulation(seed);s.start(0);const kind=nextPower(s);if(!examples.has(kind))examples.set(kind,seed);}
  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
  const context=await browser.newContext({viewport:{width:1440,height:900}}),page=await context.newPage(),errors=[];
  await context.addCookies([{name:'war_survival_campaign_v1',value:'7fff',url:base}]);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  const seen=new Set();let choiceShot=false;
- for(const seed of [731,42,19]){
+ for(const [expected,seed] of examples){
   await page.goto(base+'?test=1&seed='+seed);await page.waitForFunction(()=>window.__warTest?.ready,null,{timeout:60000});await page.evaluate(()=>window.__warTest.useManualClock());
   await page.locator('[data-level="0"]').click();await page.locator('#start-button').click();
   for(let i=0;i<750;i++){
@@ -16,16 +19,17 @@ const base=process.env.TEST_URL||'http://127.0.0.1:4173/war-survival/',output=pa
    if(state.choice&&!choiceShot){choiceShot=true;await page.waitForTimeout(120);assert.equal((await page.evaluate(()=>window.__warTest.targets())).armory,false);await page.screenshot({path:path.join(output,'choose-one-desktop.png')});}
    for(const kind of POWER_DECK)if(state.buffs[kind]>0&&!seen.has(kind)){
     await page.evaluate(seconds=>window.__warTest.step(seconds),kind==='starfall'?.65:.35);await page.waitForTimeout(150);
-    const fx=await page.evaluate(()=>window.__warTest.spectacle());const key={tesla:'drones',prism:'prism',starfall:'meteors',gravity:'gravity',phoenix:'phoenix'}[kind];assert.ok(fx[key],kind+' renders');
+    const fx=await page.evaluate(()=>window.__warTest.spectacle());const key={tesla:'drones',prism:'prism',starfall:'meteors',gravity:'gravity',phoenix:'phoenix',quack:'quack',stampede:'stampede'}[kind];assert.ok(fx[key],kind+' renders');
     await page.screenshot({path:path.join(output,kind+'.png')});seen.add(kind);
    }
+   if(seen.has(expected))break;
    const input=strategy(state);if(state.choice&&state.nearestEnemy<state.z-6)input.x=Math.max(-1,Math.min(1,(3.8-state.x)*3));
    await page.evaluate(input=>window.__warTest.step(.2,input),input);
   }
   if(seen.size===POWER_DECK.length)break;
  }
- assert.equal(seen.size,5,'all five random powers can be earned through normal shooting');
- await page.goto(base+'?test=1');await page.waitForFunction(()=>window.__warTest?.ready);await page.evaluate(()=>window.__warTest.useManualClock());
+ assert.equal(seen.size,POWER_DECK.length,'all seven random powers can be earned through normal shooting');
+ await page.goto(base+'?test=1&seed=19');await page.waitForFunction(()=>window.__warTest?.ready);await page.evaluate(()=>window.__warTest.useManualClock());
  await page.locator('[data-level="9"]').click();await page.locator('#start-button').click();let launch=false;
  for(let i=0;i<750;i++){
   const state=await page.evaluate(()=>window.__warTest.snapshot());if(state.state!=='active')break;
@@ -46,5 +50,5 @@ const base=process.env.TEST_URL||'http://127.0.0.1:4173/war-survival/',output=pa
   const box=await phone.locator('#rift-banner').boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width+1&&box.y+box.height<=height,'rift choice fits '+width+'x'+height);
   await phone.screenshot({path:path.join(output,'choose-one-'+width+'x'+height+'.png')});
  }
- assert.deepEqual(errors,[]);console.log('PASS: five randomly earned powers, power visuals, real boss launches, and mobile power-duel layouts.');await browser.close();
+ assert.deepEqual(errors,[]);console.log('PASS: seven randomly earned powers, power visuals, real boss launches, and mobile power-duel layouts.');await browser.close();
 })().catch(async e=>{console.error(e);await browser?.close();process.exitCode=1;});

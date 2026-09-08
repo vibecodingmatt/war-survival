@@ -1,4 +1,4 @@
-# Borderlands campaign balance · v0.6.0
+# Borderlands campaign balance · v0.7.0
 
 Pressure is fixed in data/waves.js. Successive sectors increase enemy count,
 health and speed, with different equipment and boss patterns. There is no hidden
@@ -11,7 +11,10 @@ Returning goals create another opportunity. Use the end of a thinning wave to wo
 on the next weapon instead of waiting for its replacement to arrive under pressure.
 
 Supply pods grant Overdrive (nine seconds), Rally (twelve seconds), Shield (30,
-capped at 50), or Repair (20 integrity). Every eight unshielded damage costs a
+capped at 50), Repair (20 integrity), or one of five temporary ammo modifiers.
+Each of the four support rewards appears twice and each ammo once in an independent
+13-entry shuffled bag. See [the combat guide](visual-combat-guide.md) for exact ammo
+damage/cadence values and the rare Rainbow Rush. Every eight unshielded damage costs a
 soldier. Wave clears restore ten integrity, but soldiers must be recruited again.
 
 ## Rift choices and heavy impacts
@@ -23,13 +26,18 @@ after the last pair resolves or passes. Cards travel for about 11.7 seconds, wit
 one invalidates both targets before any reward is granted. Normal side-lane
 supplies pause, preserving their progress; center-lane combat and pods continue.
 
-The left card offers six soldiers or, at full strength, 35 shield capped at 60.
+The left card usually offers six soldiers or, at full strength, 35 shield capped at 60.
+Every third recurring encounter offers two different major powers instead.
 The reward bag shuffles Starfall (eight seconds, three area strikes every 1.35 seconds),
 Tesla Halo (ten seconds, three arc drones every 0.8 seconds), and Prism Overload
 (eight seconds, 1.5x combat shot damage plus three 65% ricochets), Gravity Well
 (eight seconds of infantry pull and pulses, then a nova), and Phoenix Pact
 (ten seconds of strafing, 12 immediate integrity, and one lethal-hit rescue).
 A rescue consumes the pact, restores 35 integrity, and adds up to six soldiers.
+Quack Attack adds four giant duck drops over eight seconds, each dealing
+`760 + zeroBasedSector * 32` in a 5.2-unit radius. Toy Tanks sends three tanks every
+2.65 seconds for ten seconds; each hits a given enemy once for
+`250 + zeroBasedSector * 18` (80% against bosses, whose wider hitboxes span more lanes).
 Power damage
 does not collect recruit cards or weapon goals. Rewards, timers and airborne
 survivors reset on restart; the pause menu freezes gameplay timers.
@@ -48,7 +56,7 @@ reinforcement-versus-power rifts, a central Overdrive crate, a closer first weap
 at 70% cost, and power-versus-power duels. Opening convoys are collected by shooting;
 they do not give free starting soldiers. Normal recruits return in +1 bursts.
 
-The five-power bag has its own seeded random generator, independent of combat
+The seven-power bag has its own seeded random generator, independent of combat
 randomness. Every power appears before refill and adjacent draws never repeat.
 Live deployments choose a fresh seed; test URLs use an explicit reproducible seed.
 
@@ -79,7 +87,8 @@ npm run test:balance checks fifteen sectors, three seeds (731, 19, 2048), and fo
 movement policies. Tactical decisions occur every 0.2 seconds. The policy only
 chooses movement and artillery; all shots, upgrades, recruits and damage use the
 ordinary simulation. It retreats from approaching ranks, gives telegraphed guardian swings priority
-over infantry distance, chooses one rift reward, and pursues upgrades during lulls.
+over infantry distance, compares the two offered powers, avoids spending a whole
+rift on one or two recruits, and pursues upgrades during lulls.
 
 | Policy | Results across 45 runs |
 | --- | --- |
@@ -90,26 +99,28 @@ over infantry distance, chooses one rift reward, and pursues upgrades during lul
 
 | Sector | Tactical wins | Winning time | Winning integrity | Soldiers lost in winning runs |
 | --- | --- | --- | --- | --- |
-| 1 | 3 / 3 | 61–67s | 100 | 0 |
-| 2 | 3 / 3 | 71–81s | 100 | 0 |
-| 3 | 3 / 3 | 65–73s | 86–100 | 0–4 |
-| 4 | 3 / 3 | 71–81s | 100 | 0–1 |
-| 5 | 3 / 3 | 77–80s | 100 | 0–2 |
-| 6 | 3 / 3 | 76–88s | 48–100 | 0–7 |
-| 7 | 3 / 3 | 88–90s | 61–79 | 2–7 |
-| 8 | 3 / 3 | 90–94s | 51–78 | 2–8 |
-| 9 | 3 / 3 | 90–92s | 73–100 | 0–5 |
-| 10 | 3 / 3 | 91–101s | 21–59 | 8–11 |
-| 11 | 3 / 3 | 107–116s | 91–100 | 3–5 |
-| 12 | 2 / 3 | 100s | 48–74 | 3–9 |
-| 13 | 3 / 3 | 103–110s | 60–93 | 3–8 |
-| 14 | 3 / 3 | 110–115s | 15–90 | 1–12 |
-| 15 | 2 / 3 | 111–115s | 62–96 | 3–12 |
+| 1 | 3 / 3 | 65–66s | 100 | 0 |
+| 2 | 3 / 3 | 70–82s | 100 | 0 |
+| 3 | 3 / 3 | 78–79s | 83–100 | 0–2 |
+| 4 | 3 / 3 | 71–81s | 80–100 | 2–6 |
+| 5 | 3 / 3 | 74–80s | 94–100 | 0–2 |
+| 6 | 3 / 3 | 76–79s | 92–100 | 0–2 |
+| 7 | 3 / 3 | 83–89s | 75–82 | 2–5 |
+| 8 | 3 / 3 | 90–93s | 16–74 | 5–15 |
+| 9 | 3 / 3 | 87–93s | 35–71 | 6–10 |
+| 10 | 3 / 3 | 100–105s | 62–100 | 0–8 |
+| 11 | 3 / 3 | 103–110s | 61–71 | 3–9 |
+| 12 | 3 / 3 | 99–107s | 22–100 | 0–9 |
+| 13 | 3 / 3 | 99–107s | 63–100 | 0–7 |
+| 14 | 2 / 3 | 97–109s | 33–55 | 8–13 |
+| 15 | 2 / 3 | 121–123s | 11–51 | 11–16 |
 
 The fixed tactical policy clears the original ten stages on all three draws.
 Each expansion stage must clear on at least two of three draws; these harder
 stages deliberately permit failed runs. The full browser campaign also verifies
-a complete fifteen-stage victory using ordinary inputs. These are sample bot
+a complete fifteen-stage victory using ordinary inputs and seed 19. The two failed
+expansion samples are sector 14/seed 2048 and sector 15/seed 731; they remain in the
+balance suite, whose original thresholds are unchanged. These are sample bot
 outcomes, not promised human completion rates. Mechanics tests separately cover
 exclusive choices, pull resistance, expiry, phoenix rescue, and shielded launches.
 
@@ -119,7 +130,7 @@ Cookie tests cover first visits, sequential unlocks, replays, malformed values,
 one-year persistence and migration of existing local victories. Client-side
 progress is a convenience for a single-player game, not an anti-cheat system.
 
-Desktop checks exercise movement, artillery, pause, all nine Next transitions,
+Desktop checks exercise movement, artillery, pause, all fourteen Next transitions,
 locked click rejection and unlock persistence after reload. Campaign checks play
 all fifteen encounters with tactical inputs. Mobile checks cover eight viewports with
 safe insets, drag controls, two-finger artillery, rotation, a Level 15 victory and
