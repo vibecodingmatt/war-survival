@@ -56,7 +56,9 @@ async function inventory(directory){
       await context.addCookies([{name:'war_survival_campaign_v1',value:'3ff',url:base}]);
       const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
       page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url());});
-      await page.goto(base);await page.waitForFunction(()=>document.querySelector('#loading').classList.contains('hidden'),null,{timeout:60000});
+      // The loaded game indicator establishes readiness after module/asset setup.
+      await page.goto(base,{waitUntil:'domcontentloaded',timeout:60000});
+      await page.waitForFunction(()=>document.querySelector('#loading').classList.contains('hidden'),null,{timeout:60000});
       assert.equal(await page.evaluate(()=>typeof window.__warTest),'undefined');
       assert.equal(await page.locator('[data-level="10"]').isDisabled(),false);
       assert.equal(await page.locator('[data-level="11"]').isDisabled(),true);

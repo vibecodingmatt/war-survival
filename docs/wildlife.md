@@ -63,3 +63,10 @@ held 60 FPS (16.7 ms p95, 223 draws). These are desktop-host emulation measureme
 Detailed logs and screenshots are in ignored `test-results/wildlife/` and
 `test-results/polish/`. The gameplay logic was unchanged; combat-module diffs
 only update browser import queries to v0.7.1.
+
+The v0.7.1 production release (`65564c6`) deployed successfully to GitHub Pages
+on 2026-09-08. Live verification matched HTML, all 36 game modules/styles and share
+assets to the release. Normal desktop/phone startup, save migration, pause/resume
+and debug isolation passed. The wildlife suite also passed against production in
+all 15 worlds on desktop and phone; its images/report are in
+`test-results/release/wildlife/`.
