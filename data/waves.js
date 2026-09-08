@@ -1,4 +1,4 @@
-import { WORLDS, ROUTES, WEAPON_LIBRARY, BOSS_TYPES, OPENINGS } from './campaign.js?v=0.7.1';
+import { WORLDS, ROUTES, WEAPON_LIBRARY, BOSS_TYPES, OPENINGS } from './campaign.js?v=0.7.2';
 export const WAVES = [
   { name: 'THE VANGUARD', description: 'Left: +1 soldiers. Center: enemies. Right: stronger guns.', count: 80, hp: 62, speed: 1.8, brutes: 0, grenadiers: 0 },
   { name: 'RED TIDE', description: 'The ranks are growing. Your squad must grow faster.', count: 136, hp: 120, speed: 1.95, brutes: 3, grenadiers: 1 },

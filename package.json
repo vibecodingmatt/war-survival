@@ -1,6 +1,6 @@
 {
   "name": "war-survival",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "type": "module",
   "description": "A 3D browser squad survival game, built for GitHub Pages.",

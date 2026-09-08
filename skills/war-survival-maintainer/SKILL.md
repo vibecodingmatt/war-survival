@@ -23,10 +23,14 @@ the active biome root for disposal, outside the bridge, and visible on phones.
 Cosmetic clocks/randomness must stay separate from simulation. Test hooks belong
 only behind `?test=1`; production has no debug global.
 
-Wildlife uses small themed populations and intermittent visitors with quiet gaps.
-Preserve species differences, detailed butterfly wings and occasional gatherings;
-do not reintroduce the same dense butterfly swarm in every biome. Run the wildlife
-and polish suites for wildlife changes and inspect desktop/phone screenshots.
+The user wants fantastical, original encounters, not repeated insects and birds.
+Every world has its own signature creature, anatomy, behavior and habitat. Most
+rest or watch; do not make flight the default. Volcano dragons and the Sky Citadel
+griffin fit their worlds; aquatic creatures belong in the reef. Preserve the
+jungle's detailed morphos and occasional gathering without spreading butterflies
+across the campaign. Do not substitute palette swaps for distinct creatures.
+Run the wildlife and polish suites and inspect desktop/phone screenshots, including
+animal scale, dragon framing and feet actually meeting their support.
 Avoid overlapping browser performance suites. Report phone emulation separately
 from physical-device testing.
 

@@ -70,7 +70,7 @@ old-save expansion unlocks and the absence of production debug globals. It is
 read-only against the site. `RELEASE_URL` can select another server for rehearsal.
 
 For wildlife releases, also run `test:wildlife` with `TEST_URL` set to the public
-URL to exercise actual visitor and gathering behavior. This touches only a local
+URL to exercise actual fantasy-creature and gathering behavior. This touches only a local
 browser's test state and cookie. Keep local and production reports distinguishable.
 If the public site is temporarily stale, wait and retry verification; do not edit
 or republish source simply to defeat a cache. Persistent errors need investigation.

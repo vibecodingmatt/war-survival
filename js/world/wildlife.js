@@ -1,7 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
-import { WILDLIFE, wildlifeVisit, residentCount } from '../../data/wildlife.js?v=0.7.1';
-import { buildWildlife } from './wildlife-models.js?v=0.7.1';
-import { randomSource } from '../core/math.js?v=0.7.1';
+import { WILDLIFE, wildlifeVisit, residentCount } from '../../data/wildlife.js?v=0.7.2';
+import { buildWildlife } from './wildlife-models.js?v=0.7.2';
+import { randomSource } from '../core/math.js?v=0.7.2';
+import { createFantasyCreature } from './fantasy-creatures.js?v=0.7.2';
 
 export function createWildlife(root, biome, level) {
   const spec=WILDLIFE[biome], seed=9127+level*137, random=randomSource(seed);
@@ -23,7 +24,7 @@ export function createWildlife(root, biome, level) {
     const units=Array.from({length:count},(_,i)=>({side:i%2?1:-1,x:i<2?11.1:12+random()*8,z:i<2?-7+i*13:-15-random()*53,y:2.2+random()*3.5,phase:random()*Math.PI*2,size:i<2?1.1:.7+random()*.32}));
     residentGroups.push({group,units,count});
   }
-  const visitorGroup=flock(spec.visitor,4);
+  const signature=createFantasyCreature(root,spec.signature,level);
   function draw(group,x,y,z,yaw,bank,scale,phase,time,gliding=false) {
     const {model,body,wing}=group,i=body.count;if(i>=group.capacity)return;
     transform.position.set(x,y,z);transform.rotation.set(0,yaw,bank);transform.scale.setScalar(scale*model.size);transform.updateMatrix();body.setMatrixAt(i,transform.matrix);body.count++;
@@ -55,19 +56,7 @@ export function createWildlife(root, biome, level) {
         draw(group,x,y,z,yaw,Math.sin(a)*.15,f.size,f.phase,localTime*(reduced?.55:1),bird&&Math.sin(a)>.25);
       }
     }
-    const visit=wildlifeVisit(localTime,seed);
-    if(visit.active) {
-      const count=spec.visitor==='skywhale'?1:Math.min(visit.count,balanced?2:4);
-      for(let i=0;i<count;i++) {
-        const u=visit.progress-i*.035;if(u<0||u>1)continue;
-        // Passes above the side of the gorge, clear of the bridge and warning zones.
-        const side=visit.side,x=side*(10.8+Math.sin(u*Math.PI)*1.2+i*2.2),z=30-u*117-i*6;
-        const y=9+Math.sin(u*Math.PI*2)*1.5+i*.6,scale=(spec.visitor==='skywhale'?.82:1.05)*Math.min(1,u*8,(1-u)*8);
-        const yaw=Math.atan2(-side*Math.cos(u*Math.PI)*1.2*Math.PI,117);
-        draw(visitorGroup,x,y,z,yaw,side*Math.sin(u*Math.PI*2)*.18,scale,i*.9,localTime*(reduced?.55:1),visit.progress>.25&&visit.progress<.72);
-        visitors++;
-      }
-    }
+    signature.update(localTime,reduced);
     if(spec.bloom) {
       const bloom=wildlifeVisit(localTime,seed,true);
       if(bloom.active) {
@@ -81,10 +70,10 @@ export function createWildlife(root, biome, level) {
     }
     for(const group of species.values()) {group.body.instanceMatrix.needsUpdate=group.wing.instanceMatrix.needsUpdate=true;}
   }
-  return {description:spec.description,batches:species.size*2,
+  return {description:spec.description,batches:species.size*2+signature.batches,
     setQuality(value,scale=1){balanced=value==='balanced';density=scale;lastTime=-1;},update,
-    snapshot:()=>({creatures:[...species.values()].reduce((n,g)=>n+g.body.count,0),wildlifeSpecies:spec.residents.map(([kind])=>kind),visitorSpecies:spec.visitor,
-      visitors,butterflyBloom:bloomCount,wildlifeTime:localTime,wildlifePositions:positions,
-      nextVisit:wildlifeVisit(localTime,seed),nextBloom:spec.bloom?wildlifeVisit(localTime,seed,true):null}),
+    snapshot:()=>({creatures:[...species.values()].reduce((n,g)=>n+g.body.count,0)+signature.snapshot().signatureCount,wildlifeSpecies:spec.residents.map(([kind])=>kind),
+      visitors,butterflyBloom:bloomCount,wildlifeTime:localTime,wildlifePositions:[...positions,...signature.snapshot().signaturePositions],...signature.snapshot(),
+      nextVisit:null,nextBloom:spec.bloom?wildlifeVisit(localTime,seed,true):null}),
   };
 }

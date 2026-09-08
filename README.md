@@ -1,6 +1,6 @@
 # War: Survival
 
-**Living Worlds & Toybox Arsenal · v0.7.1 · Wildlife variety**
+**Living Worlds & Toybox Arsenal · v0.7.2 · Fantastical creatures**
 
 A browser squad survival game with fifteen short, escalating levels. Recruit soldiers,
 catch moving weapon upgrades, and defeat each sector's guardian. Every level starts
@@ -43,7 +43,7 @@ The HUD keeps squad integrity, the equipped weapon, temporary boosts, and Artill
 | 09 · Lumen Wilds | Moonlit mushrooms and fireflies | Spore Empress |
 | 10 · The Sky Citadel | Floating islands and an eclipse gate | Eclipse Sovereign |
 | 11 · Coral Cathedral | Branching coral shelves, pulsing jellyfish and drifting tentacles | Coral Leviathan |
-| 12 · Clockwork Gardens | Turning brass gears, pendulums, beetles and glass-wing dragonflies | Brass Timekeeper |
+| 12 · Clockwork Gardens | Turning brass gears, pendulums and a watchful owl automaton | Brass Timekeeper |
 | 13 · Moonlotus Marsh | Unfurling lotus flowers, lily pads, ripples and dancing wisps | Lotus Matriarch |
 | 14 · Prismatic Rift | Levitating crystal gardens, orbital fragments and aurora ribbons | Prism Titan |
 | 15 · Dragon Observatory | Floating orreries, orbiting planets and an articulated flying dragon | Astral Wyrm |
@@ -166,8 +166,8 @@ camera shake, and softens ambient movement.
 Waterfalls follow rocky stream beds over curved, irregular lips into foam and spray.
 The caldera adds tumbling ash, rising embers, lava channels and expanding soot clouds.
 Every sector has additional animated gardens, wildlife and flowing light details,
-from orchid banks and waterfall rainbows to spirit koi, storm vortices, lava
-fountains and rare celestial whales. Nearby themed focal points keep
+from orchid banks and waterfall rainbows to storm vortices, lava fountains,
+mythical beasts and a cosmic hare. Nearby themed focal points keep
 the scenery visible in portrait. Scenery uses bundled textures, instanced geometry, animated water, soft mist,
 wind-driven foliage, and bounded weather particles. Sector scenery is disposed when
 switching worlds; inactive weapon models are released after their fallen soldiers
@@ -175,15 +175,16 @@ finish animating. Soldier armor is batched by material and joint; effects use
 bounded pools and distant scenery updates less often on Balanced. There is no
 runtime CDN, backend, account, installation, or asset-generation service.
 
-Wildlife now varies by world, with small resident groups instead of a blanket of
-butterflies. Iridescent blue morphos live near jungle waterfalls, a few monarchs
-visit the autumn gardens, and moon moths share the luminous forest with fireflies.
-Other worlds have veined dragonflies, metallic beetles, striped fish, gliding rays,
-or birds with layered feathers. The jungle occasionally hosts a larger spiral
-of butterflies rising beside the falls. Macaws, kingfishers, hawks, cranes, herons,
-and other visitors make short flights above the gorge, with quiet gaps between
-visits. Wildlife stays outside the combat lanes and freezes on pause. Balanced
-graphics reduces population rather than simplifying individual creatures.
+Every world now has its own fantasy encounter. Obsidian dragons circle the
+volcano, a griffin watches from the Sky Citadel, a sphinx reclines beside the oasis,
+and a nine-tailed fox sits among autumn leaves. Elsewhere, discover a frost
+mammoth, jade qilin, spirit stag, fire-tailed phoenix, thunder roc, mechanical owl,
+lotus frog king, crystal basilisk, cosmic hare and spiral-shelled reef nautilus.
+An ancient mossback tortoise shares the jungle waterfall with iridescent morphos
+and their occasional gathering. Fish are confined to the reef. Most creatures
+rest, breathe and watch from habitats suited to their world. See the full
+[creature roster](docs/wildlife.md). Scenery stays outside combat lanes and freezes
+on pause; Balanced retains the signature creatures while trimming small wildlife.
 
 ## Development and verification
 

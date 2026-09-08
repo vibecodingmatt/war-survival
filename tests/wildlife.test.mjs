@@ -17,11 +17,11 @@ test('wildlife visits have quiet gaps, varied arrivals, bounded flocks and repro
   }
 });
 
-test('all biome populations render distinct geometry, stay out of the bridge and remain bounded',()=>{
+test('every world has its own fantasy creature, grounded resting poses and bounded geometry',()=>{
   const populations=new Set();let level=0;
   for(const [biome,spec] of Object.entries(WILDLIFE)){
     const root=new T.Group(),wildlife=createWildlife(root,biome,level++);
-    populations.add(spec.residents.map(([kind])=>kind).join(','));
+    populations.add(spec.signature);
     const geometryCount=root.children.length;
     for(const mesh of root.children){
       assert.ok(mesh.geometry.attributes.position.count>40,'authored multi-part animals');
@@ -30,7 +30,9 @@ test('all biome populations render distinct geometry, stay out of the bridge and
     }
     for(let time=0;time<150;time+=.25){
       wildlife.update(time);
-      const state=wildlife.snapshot();assert.ok(state.creatures>0&&state.creatures<=22);
+      const state=wildlife.snapshot();assert.ok(state.creatures>0&&state.creatures<=14);
+      assert.equal(state.signatureKind,spec.signature);
+      if(!['dragon','nautilus'].includes(spec.signature))for(const p of state.signaturePositions){assert.equal(p.mode,'resting');assert.equal(p.y,spec.signature==='frogking'?-3.3:.4);assert.equal(p.z,-30);}
       assert.ok(state.wildlifePositions.every(p=>Math.abs(p.x)>7.6),'wildlife avoids combat lanes');
       for(const mesh of root.children)assert.ok(mesh.count<=mesh.instanceMatrix.count);
     }
@@ -42,7 +44,12 @@ test('all biome populations render distinct geometry, stay out of the bridge and
     for(const geometry of new Set(root.children.map(m=>m.geometry)))geometry.dispose();
     for(const material of new Set(root.children.map(m=>m.material)))material.dispose();
   }
-  assert.equal(populations.size,15,'each world has its own resident combination');
+  assert.equal(populations.size,15,'no signature creature is reused in another world');
+  assert.equal(WILDLIFE.volcano.signature,'dragon');
+  assert.equal(WILDLIFE.celestial.signature,'griffin');
+  assert.deepEqual(WILDLIFE.celestial.residents,[],'no aquatic creatures in the sky city');
+  const smallSpecies=Object.values(WILDLIFE).flatMap(spec=>spec.residents.map(([kind])=>kind));
+  assert.equal(new Set(smallSpecies).size,smallSpecies.length,'small wildlife is also exclusive to its world');
 });
 
 test('butterfly gatherings are occasional and restricted to the jungle',()=>{

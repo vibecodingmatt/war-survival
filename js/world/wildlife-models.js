@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { mergeRigidParts } from '../core/geometry.js?v=0.7.1';
+import { mergeRigidParts } from '../core/geometry.js?v=0.7.2';
 
 // Authored geometry, merged by animated joint and material. Two draws per species.
 // Birds have layered feathers; insects have segmented bodies, eyes and wing veins.
@@ -20,7 +20,7 @@ const PALETTES = {
   starray:[0x4b527e,0x8abdcf,0xebd4a1], skywhale:[0x526985,0xaccdd1,0xf4dfa7],
 };
 
-function coloredMerge(parts) {
+export function coloredMerge(parts) {
   const geometry = mergeRigidParts(parts), colors = [];
   for (const part of parts) {
     const c = new T.Color(part.color);
@@ -31,7 +31,7 @@ function coloredMerge(parts) {
   return geometry;
 }
 
-function surface(points) {
+export function surface(points) {
   const shape = new T.Shape(); shape.moveTo(points[0][0], -points[0][1]);
   for (const point of points.slice(1)) shape.lineTo(point[0], -point[1]);
   shape.closePath(); const flat = new T.ShapeGeometry(shape); flat.rotateX(-Math.PI/2);

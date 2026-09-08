@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.7.1';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.7.2';
 
 // A few articulated hero models, separate from the instanced infantry.
 export function createBosses(scene){

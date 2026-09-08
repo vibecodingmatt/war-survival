@@ -1,8 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
-import { flightPose } from '../core/flight.js?v=0.7.1';
-import { POWERS } from '../../data/powers.js?v=0.7.1';
-import { createMythicEffects } from './mythic-effects.js?v=0.7.1';
-import { createComedy } from './comedy.js?v=0.7.1';
+import { flightPose } from '../core/flight.js?v=0.7.2';
+import { POWERS } from '../../data/powers.js?v=0.7.2';
+import { createMythicEffects } from './mythic-effects.js?v=0.7.2';
+import { createComedy } from './comedy.js?v=0.7.2';
 
 // Persistent pools: a full screen of chain lightning still costs two draw calls.
 export function createSpectacle(scene) {

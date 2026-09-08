@@ -1,7 +1,7 @@
 # War: Survival handoff
 
 Read `README.md` for the player rules and `docs/visual-combat-guide.md` for the
-rendering architecture, effect budgets, test fixtures and v0.7.1 changes.
+rendering architecture, effect budgets, test fixtures and v0.7.2 changes.
 `docs/balance.md` records the measured campaign outcomes. This is a standalone Git
 repository inside `games-playground`; run Git and npm from this directory.
 
@@ -32,6 +32,9 @@ repository inside `games-playground`; run Git and npm from this directory.
   all temporary effects reset on replay/next sector and freeze on pause.
 - Add scenery under the active biome root so sector changes dispose it. Keep
   focal objects outside the bridge (`|x| > 7.6`). Check portrait composition too.
+- Give each world a distinct fantasy creature and habitat. The user rejected
+  repeated insects/birds and aquatic animals in the Sky Citadel. Most encounters
+  should rest or watch; do not make every biome another flying population.
 - Batch repeated rigid geometry by material and animated joint. Avoid per-shot
   meshes, per-enemy lights, unbounded particles and frame-by-frame canvas uploads.
 - Keep live state behind `?test=1` instrumentation. Production has no debug global.
@@ -44,8 +47,8 @@ repository inside `games-playground`; run Git and npm from this directory.
   Investigate failed seeds; do not weaken the assertions to hide regressions.
 - Visuals/effects: `npm run test:polish` checks every world, ammo and power visuals,
   simultaneous effects, cleanup, pause and reduced motion. Inspect its screenshots.
-- Wildlife: also run `npm run test:wildlife` for scheduled visitors, butterfly
-  gatherings, quiet intervals and desktop/phone composition in all 15 worlds.
+- Wildlife: also run `npm run test:wildlife` for exclusive fantasy encounters,
+  grounded resting poses, dragon framing and butterfly gatherings in all 15 worlds.
 - Controls/HUD: `npm run test:browser`, `npm run test:mobile`.
 - End-to-end: `npm run test:campaign`; use `test:fun` to earn all seven powers
   through actual lane shooting, and `test:expansion` for old-save expansion checks.

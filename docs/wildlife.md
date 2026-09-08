@@ -1,72 +1,69 @@
-# Wildlife variety · v0.7.1
+# Fantastical world creatures · v0.7.2
 
-Small resident populations give each world an identity. Occasional visitors add
-larger silhouettes with quiet intervals, and butterflies have two dedicated
-settings rather than appearing throughout the campaign.
+Every world has one exclusive fantasy encounter, with its own anatomy, habitat
+and behavior. Do not fill the campaign with repeated bird/insect populations or
+recolored versions of one flying shape. Resting creatures belong on a visible
+ledge, ruin, ice shelf or lily pad. Aquatic creatures belong in the coral world.
 
-| World | Residents | Occasional visitor |
+| World | Signature encounter | Behavior and habitat |
 | --- | --- | --- |
-| Ashen Crossing | Blue morphos, dragonflies | Macaws; a separate butterfly gathering |
-| Ember Gate | Fireflies, bronze scarabs | Dusk swallows |
-| Jade Cascades | Dragonflies, koi | Kingfishers |
-| Frostglass Pass | Snow finches | White geese |
-| Sunscar Oasis | Copper scarabs, oasis dragonflies | Hawks |
-| Tempest Reach | Swallows | Ravens |
-| Amber Sanctuary | Monarchs, songbirds | Cranes |
-| Cinder Caldera | Ember beetles | Ravens |
-| Lumen Wilds | Moon moths, fireflies | Bats |
-| Sky Citadel | Swallows, cloud rays | Cranes |
-| Coral Cathedral | Striped reef fish, rays | Mantas |
-| Clockwork Gardens | Brass beetles, mechanical dragonflies | Brass birds |
-| Moonlotus Marsh | Fireflies, dragonflies | Herons |
-| Prismatic Rift | Crystal rays | Crystal-wing birds |
-| Dragon Observatory | Star rays, fireflies | A celestial whale |
+| Ashen Crossing | Ancient mossback tortoise | Mossy shell garden; watches from a rooted ledge |
+| Ember Gate | Fire-tailed phoenix | Long flame feathers; slowly unfurls on a ruined roost |
+| Jade Cascades | Jade qilin | Branched antlers, scales and golden hooves; stands by the falls |
+| Frostglass Pass | Six-tusk frost mammoth | Shaggy coat, curled trunk and ivory tusks; ice shelf |
+| Sunscar Oasis | Golden sphinx | Striped headdress and extended lion paws; sandstone steps |
+| Tempest Reach | Thunder roc | Crest and layered storm feathers; surveys a basalt crag |
+| Amber Sanctuary | Nine-tailed kitsune | Cream-tipped tail fan and alert ears; autumn garden ledge |
+| Cinder Caldera | Two obsidian dragons | Horns, teeth, spines and ribbed wings; circle the caldera |
+| Lumen Wilds | Moon-antler spirit stag | Luminous antler growths and spotted coat; mushroom ledge |
+| The Sky Citadel | Griffin sentinel | Eagle head, folded wings, lion haunches and tail; floating battlement |
+| Coral Cathedral | Ancient reef nautilus | Spiral shell, ridges, eyes and curling tentacles; swims through the reef |
+| Clockwork Gardens | Brass owl automaton | Jeweled eyes and gear breastplate; turns its head above a toothed gear perch |
+| Moonlotus Marsh | Lotus frog king | Flower crown, golden eyes and inflating throat; giant lily pad at water height |
+| Prismatic Rift | Crystal basilisk | Six legs, faceted scales and quartz spines; crystal shelf |
+| Dragon Observatory | Cosmic hare | Long moving ears, constellation markings and a halo; cratered moon fragment |
 
-The first visitor arrives 5–13 visual seconds after entering a world. Visits last
-11–15 seconds in 47-second scheduling windows; timing and formation vary per
-window. Flocks have two to four members (at most two on Balanced); a whale travels
-alone. Jungle gatherings add eight morphos (five on Balanced) for 14–18 seconds
-in separate 67-second windows. Encounters use a dedicated cosmetic seed and never
-consume simulation randomness. They are decorative and award no gameplay effects.
+Only the jungle has butterflies: five resident blue morphos, plus an occasional
+eight-butterfly gathering beside the waterfall. Balanced uses four residents and
+five gathering butterflies, with further resident reductions under adaptation.
+The coral world also has four striped reef fish (three on Balanced). These small
+species are exclusive to their respective worlds. Thirteen worlds have no small
+flying wildlife population. The existing observatory dragon remains part of its
+original landmark; it is separate from the new volcanic dragons.
 
-Models have merged, colored geometry: eyes and segmented bodies, wing veins,
-curved surfaces, layered feathers, fish stripes, fin markings, and patterned
-butterfly wings on both faces. Blue morphos use an iridescent physical material.
-Birds alternate wing beats and glides; insects hover, fish cruise, rays undulate,
-and the butterfly gathering rises in a spiral beside the waterfall.
+## Implementation
 
-Each species uses two instanced draws, for body and wings. At most three species
-are resident or visiting in a world, so wildlife adds at most six batches; total
-living-world detail stays within twelve batches. No wildlife lights, external
-textures, or per-frame canvas uploads are introduced. The biome root owns the
-meshes/materials and disposes them on a level change. Counts remain bounded while
-visitors arrive and leave. Geometry detail is retained on Balanced, which reduces
-resident and visitor counts and updates wildlife at 30 Hz. Reduced motion slows
-wing animation, and pausing freezes the visual clock.
+`data/wildlife.js` assigns each biome its exclusive signature creature and optional
+small residents. `fantasy-models.js` authors colored, merged geometry for body,
+head, appendages and support. `fantasy-creatures.js` animates breathing, gaze,
+ears, tails, throat inflation, wing poses, dragon circles and nautilus swimming.
+These use a cosmetic clock and never consume combat randomness or award effects.
 
-Run `npm test`, `npm run test:wildlife`, `npm run test:polish`, and
-`npm run test:mobile`. Review images in `test-results/wildlife/` and the full visual
-suite's resource/stress results. Chrome phone emulation is not physical-device
-performance measurement.
+There are at most four instanced batches per signature encounter, with one or two
+creatures. Jungle/coral residents add two batches. Total living-world detail stays
+within twelve batches. Populations peak at fourteen creatures in the jungle
+(ten on Balanced). No new lights, downloaded textures or per-frame canvas uploads
+are introduced. The biome root owns and disposes every mesh/material on switching
+worlds. Balanced retains the signature creature and its geometry, updates wildlife
+at 30 Hz, and trims small populations. Reduced motion slows poses and flight;
+pausing freezes everything.
 
-## Validation recorded on 2026-09-08
+## Verification
 
-All five unit test files passed, followed by the wildlife, polish and mobile
-browser suites. Desktop and phone screenshots cover all 15 worlds, scheduled
-visitors, the butterfly gathering and quiet intervals. Checks also cover paused
-animation, bounded resources after revisiting worlds, eight touch layouts and a
-mobile Level 15 victory.
+Run `npm test`, `npm run test:wildlife` and `npm run test:polish` for these visual
+changes. Unit checks require fifteen distinct signature creatures, exclusive small
+species, grounded resting positions, finite colored geometry, bounded instances,
+clear combat lanes, butterfly gathering intervals and pause stability. Browser
+checks capture every world on desktop and phone and verify resting anchors and
+the absence of sky-city aquatic wildlife. Inspect the captures, especially dragon
+framing and the relationship between an animal's feet and its support.
 
-Chrome phone emulation held 60 FPS during the four-power combat stress scenario
-(16.8 ms frame p95). A separate butterfly gathering with the same combat effects
-held 60 FPS (16.7 ms p95, 223 draws). These are desktop-host emulation measurements.
-Detailed logs and screenshots are in ignored `test-results/wildlife/` and
-`test-results/polish/`. The gameplay logic was unchanged; combat-module diffs
-only update browser import queries to v0.7.1.
+The polish suite covers resource cleanup, reduced motion and simultaneous combat
+effects. Use its stress report to assess desktop-host phone emulation, not as a
+physical iOS/Android benchmark. Keep artifacts in ignored `test-results/`.
+Publish through [publishing.md](publishing.md), reusing unchanged checks instead
+of repeating a complete suite during every documentation follow-up.
 
-The v0.7.1 production release (`65564c6`) deployed successfully to GitHub Pages
-on 2026-09-08. Live verification matched HTML, all 36 game modules/styles and share
-assets to the release. Normal desktop/phone startup, save migration, pause/resume
-and debug isolation passed. The wildlife suite also passed against production in
-all 15 worlds on desktop and phone; its images/report are in
-`test-results/release/wildlife/`.
+The v0.7.2 checks on 2026-09-08 passed all five unit test files, all fifteen
+desktop/phone wildlife compositions and the complete polish suite. The phone
+emulation combat stress sample held 60 FPS with 239 draws and 16.8 ms frame p95.
