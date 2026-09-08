@@ -50,6 +50,8 @@ repository inside `games-playground`; run Git and npm from this directory.
 - Wildlife: also run `npm run test:wildlife` for exclusive fantasy encounters,
   grounded resting poses, dragon framing and butterfly gatherings in all 15 worlds.
 - Controls/HUD: `npm run test:browser`, `npm run test:mobile`.
+- Main menu: also `npm run test:menu` for desktop/phone layout, safe areas,
+  saved-mission visibility, help focus and replay. See `docs/menu.md`.
 - End-to-end: `npm run test:campaign`; use `test:fun` to earn all seven powers
   through actual lane shooting, and `test:expansion` for old-save expansion checks.
 - Avoid concurrent browser suites when collecting performance measurements.

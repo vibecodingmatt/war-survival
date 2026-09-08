@@ -1,8 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
 import { HDRLoader } from '../../vendor/HDRLoader.js';
-import { randomSource } from '../core/math.js?v=0.7.2';
-import { WORLDS } from '../../data/campaign.js?v=0.7.2';
-import { createAmbience } from './ambience.js?v=0.7.2';
+import { randomSource } from '../core/math.js?v=0.8.0';
+import { WORLDS } from '../../data/campaign.js?v=0.8.0';
+import { createAmbience } from './ambience.js?v=0.8.0';
 
 const dummy = new T.Object3D();
 function instances(scene, geometry, material, entries, shadow = true) {

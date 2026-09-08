@@ -1,5 +1,5 @@
-import { POWERS, POWER_DECK } from '../../data/powers.js?v=0.7.2';
-import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.7.2';
+import { POWERS, POWER_DECK } from '../../data/powers.js?v=0.8.0';
+import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.8.0';
 
 export function nextPower(sim) {
   if(!sim.powerBag.length){

@@ -1,10 +1,10 @@
 import * as T from '../../vendor/three.module.min.js';
-import { formation } from '../core/math.js?v=0.7.2';
-import { MAX_SQUAD } from '../../data/waves.js?v=0.7.2';
-import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.7.2';
-import { createBosses } from './bosses.js?v=0.7.2';
-import { flightPose } from '../core/flight.js?v=0.7.2';
-import { mergeRigidParts } from '../core/geometry.js?v=0.7.2';
+import { formation } from '../core/math.js?v=0.8.0';
+import { MAX_SQUAD } from '../../data/waves.js?v=0.8.0';
+import { WEAPON_LIBRARY } from '../../data/campaign.js?v=0.8.0';
+import { createBosses } from './bosses.js?v=0.8.0';
+import { flightPose } from '../core/flight.js?v=0.8.0';
+import { mergeRigidParts } from '../core/geometry.js?v=0.8.0';
 
 const root = new T.Object3D(), limb = new T.Object3D(), tint = new T.Color();
 const spheres = new Map();

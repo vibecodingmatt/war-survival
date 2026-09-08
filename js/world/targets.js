@@ -1,7 +1,7 @@
 import * as T from '../../vendor/three.module.min.js';
-import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.7.2';
-import { createSupplies } from './supplies.js?v=0.7.2';
-import { createChoiceTargets } from './choices.js?v=0.7.2';
+import { MAX_SQUAD, SUPPLY_EXIT } from '../../data/waves.js?v=0.8.0';
+import { createSupplies } from './supplies.js?v=0.8.0';
+import { createChoiceTargets } from './choices.js?v=0.8.0';
 
 function canvasTexture(width,height,draw){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;

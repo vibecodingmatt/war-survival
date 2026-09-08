@@ -1,19 +1,19 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js?v=0.7.2';
-import { createEnvironment } from './world/environment.js?v=0.7.2';
-import { createArmies } from './entities/army.js?v=0.7.2';
-import { createTargets } from './world/targets.js?v=0.7.2';
-import { createEffects } from './systems/effects.js?v=0.7.2';
-import { BattlefieldAudio } from './systems/audio.js?v=0.7.2';
-import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.7.2';
-import { clamp } from './core/math.js?v=0.7.2';
-import { BOSS_TYPES } from '../data/campaign.js?v=0.7.2';
-import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.7.2';
-import { POWERS } from '../data/powers.js?v=0.7.2';
-import { AMMO } from '../data/munitions.js?v=0.7.2';
-import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.7.2';
-import { activatePower, openChoice } from './core/encounters.js?v=0.7.2';
-import { collectSupply } from './core/munitions.js?v=0.7.2';
+import { Simulation } from './core/simulation.js?v=0.8.0';
+import { createEnvironment } from './world/environment.js?v=0.8.0';
+import { createArmies } from './entities/army.js?v=0.8.0';
+import { createTargets } from './world/targets.js?v=0.8.0';
+import { createEffects } from './systems/effects.js?v=0.8.0';
+import { BattlefieldAudio } from './systems/audio.js?v=0.8.0';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.8.0';
+import { clamp } from './core/math.js?v=0.8.0';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.8.0';
+import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.8.0';
+import { POWERS } from '../data/powers.js?v=0.8.0';
+import { AMMO } from '../data/munitions.js?v=0.8.0';
+import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.8.0';
+import { activatePower, openChoice } from './core/encounters.js?v=0.8.0';
+import { collectSupply } from './core/munitions.js?v=0.8.0';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
@@ -63,13 +63,31 @@ function selectLevel(index){
   selectedLevel=index;
   const level=LEVELS[index];
   document.querySelectorAll('[data-level]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.level)===index)));
-  $('level-description').textContent=level.opening.name+' · '+level.world.description+' · '+level.weapons.slice(1).map(w=>w.name).join(' → ');
-  $('start-button').firstChild.textContent='DEPLOY LEVEL '+(index+1)+' ';
+  $('level-description').textContent=level.world.description.split(' · ')[0]+' · 4 waves · '+BOSS_TYPES[level.world.boss].name.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+  $('level-description').title=level.opening.name+' · '+level.weapons.slice(1).map(w=>w.name).join(' → ');
+  $('mission-number').textContent=String(index+1).padStart(2,'0');
+  $('mission-name').textContent=level.name;
+  $('mission-status').textContent=progress.completed(index)?'CLEARED · GO AGAIN':index===0?'YOUR FIRST MISSION':'YOUR NEXT MISSION';
+  $('start-label').textContent=progress.completed(index)?'REPLAY MISSION':index===0?'PLAY NOW':'CONTINUE CAMPAIGN';
+  $('start-button').setAttribute('aria-label',$('start-label').textContent+' · Level '+(index+1)+': '+level.name);
   document.querySelector('.brand small').textContent='LEVEL '+(index+1)+' · '+level.name;
-  document.querySelector('.location-stamp small').textContent=level.world.description;
+  revealSelectedSector();
   if(sim.state==='menu'&&sim.level!==index){sim.reset(index);sim.preview();}
   environment?.setLevel(index);
 }
+
+function revealSelectedSector(){
+  requestAnimationFrame(()=>levelSelect.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'start',behavior:'instant'}));
+}
+$('how-to-play').addEventListener('click',()=>$('how-dialog').showModal());
+$('how-dialog').addEventListener('close',()=>$('how-to-play').focus());
+for(const [id,direction] of [['sectors-back',-1],['sectors-forward',1]])$(id).addEventListener('click',()=>levelSelect.scrollBy({left:direction*levelSelect.clientWidth*.75,behavior:reducedMotion?'instant':'smooth'}));
+function updateSectorArrows(){
+  $('sectors-back').disabled=levelSelect.scrollLeft<=1;
+  $('sectors-forward').disabled=levelSelect.scrollLeft+levelSelect.clientWidth>=levelSelect.scrollWidth-1;
+}
+levelSelect.addEventListener('scroll',updateSectorArrows,{passive:true});
+new ResizeObserver(updateSectorArrows).observe(levelSelect);
 
 function error(message) {
   show('loading',false);show('menu',false);$('error-message').textContent=message;show('error-panel');
@@ -219,7 +237,7 @@ async function boot(){
     environment=await createEnvironment(scene,renderer);armies=createArmies(scene);effects=createEffects(scene);targets=createTargets(scene);applyQuality(quality);updateSound();selectLevel(selectedLevel);updateCompletions();
     armies.update(sim,0);effects.update(sim,0,0);environment.update(0);targets.update(sim,0);
     await renderer.compileAsync(scene,camera);
-    show('loading',false);show('menu');requestAnimationFrame(t=>{previousTime=t;frame(t);});
+    show('loading',false);show('menu');revealSelectedSector();requestAnimationFrame(t=>{previousTime=t;frame(t);});
     if(testMode){
       window.__warTest={
         ready:true,snapshot:()=>({...sim.snapshot(),metrics}),
@@ -264,6 +282,7 @@ document.querySelectorAll('[data-menu]').forEach(button=>button.addEventListener
   sim.reset(selectedLevel);sim.preview();effects.reset();clearInput();
   closeModal('pause-panel');closeModal('result-panel');show('hud',false);show('wave-hud',false);show('pause-button',false);show('menu');
   $('start-button').focus();
+  selectLevel(selectedLevel);
 }));
 $('sound-button').addEventListener('click',()=>{audio.toggle();audio.start().then(updateSound);updateSound();});
 $('pause-button').addEventListener('click',togglePause);$('resume-button').addEventListener('click',togglePause);

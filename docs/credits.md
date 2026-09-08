@@ -28,3 +28,11 @@ Poly Haven license information: https://polyhaven.com/license
 The video is a local gameplay and art-direction reference. Its footage,
 advertisement interface, audio, textures, and models are not distributed with
 this game.
+
+## Main menu artwork
+
+`assets/images/menu-battle-v1.jpg` is original promotional artwork generated with
+the built-in imagegen tool for the v0.8.0 menu. It is a 1536×1024 JPEG (399 KB),
+loaded locally with no external runtime service. The artwork depicts the jungle
+bridge encounter; gameplay continues to use the existing Three.js geometry.
+See [menu design notes](menu.md) for the generation prompt and verification.

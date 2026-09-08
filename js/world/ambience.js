@@ -1,10 +1,10 @@
 import * as T from '../../vendor/three.module.min.js';
-import { createWaterfalls } from './waterfalls.js?v=0.7.2';
-import { createVolcano } from './volcano.js?v=0.7.2';
-import { WORLDS } from '../../data/campaign.js?v=0.7.2';
-import { randomSource } from '../core/math.js?v=0.7.2';
-import { createWonderland } from './wonderlands.js?v=0.7.2';
-import { createLivingWorld } from './living-worlds.js?v=0.7.2';
+import { createWaterfalls } from './waterfalls.js?v=0.8.0';
+import { createVolcano } from './volcano.js?v=0.8.0';
+import { WORLDS } from '../../data/campaign.js?v=0.8.0';
+import { randomSource } from '../core/math.js?v=0.8.0';
+import { createWonderland } from './wonderlands.js?v=0.8.0';
+import { createLivingWorld } from './living-worlds.js?v=0.8.0';
 
 // Rebuild only the selected biome. Shared batches keep the mobile draw count bounded.
 export function createAmbience(scene,surfaces){

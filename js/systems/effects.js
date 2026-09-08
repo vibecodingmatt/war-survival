@@ -1,7 +1,7 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.7.2';
-import { createSpectacle } from './spectacle.js?v=0.7.2';
-import { createProjectiles } from './projectiles.js?v=0.7.2';
+import { randomSource } from '../core/math.js?v=0.8.0';
+import { createSpectacle } from './spectacle.js?v=0.8.0';
+import { createProjectiles } from './projectiles.js?v=0.8.0';
 const d=new T.Object3D(),color=new T.Color();
 function glowTexture(){
   const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');

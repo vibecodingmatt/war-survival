@@ -1,6 +1,6 @@
 # War: Survival
 
-**Living Worlds & Toybox Arsenal · v0.7.2 · Fantastical creatures**
+**The Borderlands Campaign · v0.8.0 · A new invitation to battle**
 
 A browser squad survival game with fifteen short, escalating levels. Recruit soldiers,
 catch moving weapon upgrades, and defeat each sector's guardian. Every level starts
@@ -8,7 +8,11 @@ with nine riflemen and has four waves. Beat a sector to unlock the next; complet
 sectors stay available for replay. A first-party cookie remembers victories for a
 year in this browser, and earlier saved wins migrate automatically. Beating the
 Dragon Observatory completes the campaign. Existing ten-sector saves retain every
-victory and open Level 11. Deploy stays visible while the sector list scrolls.
+victory and open Level 11. The cinematic main menu pairs original battle artwork
+with one-click Play, Continue Campaign, or Replay. A horizontal sector strip keeps
+the selected mission visible; swipe it on phones or use the desktop scroll arrows.
+Deployment stays visible while browsing. How to play opens a keyboard-accessible
+guide to the three lanes, with instructions for the current input device.
 
 **Play:** https://vibecodingmatt.github.io/war-survival/
 
@@ -197,6 +201,7 @@ npm run test:balance
 npm ci
 npm run test:browser
 npm run test:mobile
+npm run test:menu
 npm run test:campaign
 npm run test:fun
 npm run test:expansion

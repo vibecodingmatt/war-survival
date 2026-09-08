@@ -1,9 +1,9 @@
-import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.7.2';
-import { clamp, randomSource, formation } from './math.js?v=0.7.2';
-import { BOSS_TYPES } from '../../data/campaign.js?v=0.7.2';
-import { updateChoices, updatePowers, openChoice, phoenixRescue, fling } from './encounters.js?v=0.7.2';
-import { nextSupply, collectSupply, fireVolley, ammoImpact } from './munitions.js?v=0.7.2';
-import { SUPPLIES } from '../../data/munitions.js?v=0.7.2';
+import { LEVELS, BARRAGE_COOLDOWN, LIMITS, MAX_SQUAD, LANE_THRESHOLD, SUPPLY_EXIT } from '../../data/waves.js?v=0.8.0';
+import { clamp, randomSource, formation } from './math.js?v=0.8.0';
+import { BOSS_TYPES } from '../../data/campaign.js?v=0.8.0';
+import { updateChoices, updatePowers, openChoice, phoenixRescue, fling } from './encounters.js?v=0.8.0';
+import { nextSupply, collectSupply, fireVolley, ammoImpact } from './munitions.js?v=0.8.0';
+import { SUPPLIES } from '../../data/munitions.js?v=0.8.0';
 
 export class Simulation {
   constructor(seed = 731) { this.seed = seed; this.reset(); this.preview(); }

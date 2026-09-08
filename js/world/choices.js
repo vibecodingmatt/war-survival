@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { POWERS } from '../../data/powers.js?v=0.7.2';
+import { POWERS } from '../../data/powers.js?v=0.8.0';
 
 export function createChoiceTargets(scene) {
   const root=new T.Group();scene.add(root);root.visible=false;

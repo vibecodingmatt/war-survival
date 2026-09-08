@@ -29,6 +29,7 @@ async function inventory(directory){
   const shareImage=html.match(/property="og:image" content="([^"]+)"/)[1];
   assert.ok(shareImage.startsWith('https://vibecodingmatt.github.io/war-survival/'));
   const assets=[new URL(shareImage).pathname.replace(/^\/war-survival\//,''),'assets/images/apple-touch-icon.png','assets/images/favicon-32.png'];
+  assets.push('assets/images/menu-battle-v1.jpg');
   for(const asset of assets)assert.ok((await fs.stat(path.join(root,asset))).size>0);
   console.log(`PASS: v${version} package/build/import versions, ${imports} imports, static entry points and share assets.`);
   if(!process.argv.includes('--live'))return;
@@ -62,6 +63,10 @@ async function inventory(directory){
       assert.equal(await page.evaluate(()=>typeof window.__warTest),'undefined');
       assert.equal(await page.locator('[data-level="10"]').isDisabled(),false);
       assert.equal(await page.locator('[data-level="11"]').isDisabled(),true);
+      await page.waitForFunction(()=>{const art=document.querySelector('.menu-art');return art.complete&&art.naturalWidth>0;});
+      await page.locator('#how-to-play').click();assert.equal(await page.locator('#how-dialog').evaluate(e=>e.open),true);
+      await page.locator('.how-close').click();assert.equal(await page.locator('#how-dialog').evaluate(e=>e.open),false);
+      await page.screenshot({path:path.join(output,'live-'+version+'-'+(mobile?'phone':'desktop')+'-menu.png')});
       await page.locator('[data-level="10"]').click();await page.locator('#start-button').click();await page.waitForTimeout(1600);
       assert.equal(await page.locator('#hud').isVisible(),true);assert.equal(await page.locator('#error-panel').isVisible(),false);
       await page.locator('#pause-button').click();assert.equal(await page.locator('#pause-panel').isVisible(),true);

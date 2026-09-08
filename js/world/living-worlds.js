@@ -1,6 +1,6 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.7.2';
-import { createWildlife } from './wildlife.js?v=0.7.2';
+import { randomSource } from '../core/math.js?v=0.8.0';
+import { createWildlife } from './wildlife.js?v=0.8.0';
 
 // All additions live under the biome root. No lights, textures, or per-particle meshes.
 // The battlefield occupies |x| < 7.6; landmarks and wildlife stay outside that space.

@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { randomSource } from '../core/math.js?v=0.7.2';
+import { randomSource } from '../core/math.js?v=0.8.0';
 
 // Water follows a stream bed, rounds the rock lip, then separates into falling ribbons.
 export function createWaterfalls(root, surfaces, profile, clock, cloudMap) {

@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { SUPPLIES } from '../../data/munitions.js?v=0.7.2';
+import { SUPPLIES } from '../../data/munitions.js?v=0.8.0';
 export function createSupplies(scene){
   const d=new T.Object3D(),pods=new Map(),textures=new Map();
   const box=new T.BoxGeometry(1.7,1.7,1.2),face=new T.PlaneGeometry(1.65,1.65),haloGeometry=new T.TorusGeometry(1.45,.06,5,32);
