@@ -66,6 +66,12 @@ async function inventory(directory){
       await page.waitForFunction(()=>{const art=document.querySelector('.menu-art');return art.complete&&art.naturalWidth>0;});
       await page.locator('#how-to-play').click();assert.equal(await page.locator('#how-dialog').evaluate(e=>e.open),true);
       await page.locator('.how-close').click();assert.equal(await page.locator('#how-dialog').evaluate(e=>e.open),false);
+      assert.equal(await page.locator('#sectors-back').isVisible(),true);
+      const scrollBefore=await page.locator('.level-select').evaluate(e=>e.scrollLeft);
+      await page.locator('#sectors-back').click();
+      await page.waitForFunction(before=>document.querySelector('.level-select').scrollLeft<before,scrollBefore);
+      await page.locator('[data-level="9"]').click();assert.match(await page.locator('#start-label').textContent(),/REPLAY/);
+      await page.waitForTimeout(800);
       await page.screenshot({path:path.join(output,'live-'+version+'-'+(mobile?'phone':'desktop')+'-menu.png')});
       await page.locator('[data-level="10"]').click();await page.locator('#start-button').click();await page.waitForTimeout(1600);
       assert.equal(await page.locator('#hud').isVisible(),true);assert.equal(await page.locator('#error-panel').isVisible(),false);

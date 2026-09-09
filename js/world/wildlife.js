@@ -1,8 +1,8 @@
 import * as T from '../../vendor/three.module.min.js';
-import { WILDLIFE, wildlifeVisit, residentCount } from '../../data/wildlife.js?v=0.8.0';
-import { buildWildlife } from './wildlife-models.js?v=0.8.0';
-import { randomSource } from '../core/math.js?v=0.8.0';
-import { createFantasyCreature } from './fantasy-creatures.js?v=0.8.0';
+import { WILDLIFE, wildlifeVisit, residentCount } from '../../data/wildlife.js?v=0.8.1';
+import { buildWildlife } from './wildlife-models.js?v=0.8.1';
+import { randomSource } from '../core/math.js?v=0.8.1';
+import { createFantasyCreature } from './fantasy-creatures.js?v=0.8.1';
 
 export function createWildlife(root, biome, level) {
   const spec=WILDLIFE[biome], seed=9127+level*137, random=randomSource(seed);

@@ -30,10 +30,10 @@
   <link rel="icon" href="./assets/images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="./assets/images/emblem.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./assets/images/apple-touch-icon.png" sizes="180x180">
-  <link rel="stylesheet" href="./css/style.css?v=0.8.0">
-  <link rel="stylesheet" href="./css/mobile.css?v=0.8.0">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.8.0">
-  <link rel="stylesheet" href="./css/menu.css?v=0.8.0">
+  <link rel="stylesheet" href="./css/style.css?v=0.8.1">
+  <link rel="stylesheet" href="./css/mobile.css?v=0.8.1">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.8.1">
+  <link rel="stylesheet" href="./css/menu.css?v=0.8.1">
   <link rel="preload" as="image" href="./assets/images/menu-battle-v1.jpg">
 </head>
 <body>
@@ -70,12 +70,12 @@
         <div class="menu-help-row"><p class="menu-controls keyboard-only"><kbd>W A S D</kbd> / arrows / drag · Auto-fire</p><p class="menu-controls touch-only">Drag to move · Auto-fire</p><button id="how-to-play" class="menu-help-button">How to play <span aria-hidden="true">?</span></button></div>
       </div>
       <div class="campaign-browser">
-        <div class="campaign-heading"><span>THE BORDERLANDS CAMPAIGN</span><small id="campaign-progress">0 / 15 CLEARED</small><div class="campaign-arrows"><button id="sectors-back" aria-label="Previous sectors">←</button><button id="sectors-forward" aria-label="More sectors">→</button></div></div>
-        <div class="level-select" role="group" aria-label="Choose one of fifteen levels"></div>
+        <div class="campaign-heading"><div class="campaign-heading-copy"><div><span>LEVEL SELECT</span><small id="campaign-progress">0 / 15 CLEARED</small></div><p id="campaign-hint"><span class="touch-only">Swipe or use arrows to browse</span><span class="keyboard-only">Browse levels · Replay any cleared level</span></p></div><div class="campaign-arrows"><button id="sectors-back" aria-label="Browse earlier levels" aria-controls="campaign-levels">←</button><button id="sectors-forward" aria-label="Browse later levels" aria-controls="campaign-levels">→</button></div></div>
+        <div id="campaign-levels" class="level-select" role="group" aria-label="Choose one of fifteen levels" aria-describedby="campaign-hint"></div>
       </div>
     </div>
     <div class="location-stamp" aria-hidden="true"><span class="stamp-line"></span><span>SMALL SQUAD. COLOSSAL ODDS.<small>THE BORDERLANDS AWAIT</small></span></div>
-    <div class="build-stamp">THE BORDERLANDS CAMPAIGN · 0.8.0</div>
+    <div class="build-stamp">THE BORDERLANDS CAMPAIGN · 0.8.1</div>
   </section>
   <dialog id="how-dialog" class="how-dialog" aria-labelledby="how-title">
     <form method="dialog"><button class="how-close" aria-label="Close instructions">×</button></form>
@@ -102,6 +102,6 @@
   <section id="result-panel" class="modal-layer hidden" aria-labelledby="result-title"><div class="modal compact-modal"><p id="result-kicker" class="eyebrow">MISSION COMPLETE</p><h2 id="result-title">The crossing holds.</h2><p id="result-description" class="modal-description"></p><div class="result-stats"><div><strong id="result-kills">0</strong><small>DEFEATED</small></div><div><strong id="result-time">0:00</strong><small>ELAPSED</small></div><div><strong id="result-health">100</strong><small>INTEGRITY</small></div></div><button id="next-level-button" class="primary-button hidden">NEXT LEVEL · EMBER GATE <span>→</span></button><button id="replay-button" class="primary-button">REPLAY LEVEL <span>↗</span></button><button data-menu class="text-button">Choose a level</button></div></section>
   <section id="error-panel" class="modal-layer hidden"><div class="modal compact-modal"><p class="eyebrow">UNABLE TO START</p><h2>Let's get you into battle.</h2><p id="error-message" class="modal-description">This game needs a browser with WebGL 2 enabled.</p><button class="primary-button" onclick="location.reload()">TRY AGAIN <span>↗</span></button></div></section>
   <noscript><div class="noscript">Enable JavaScript to play War: Survival.</div></noscript>
-  <script type="module" src="./js/main.js?v=0.8.0"></script>
+  <script type="module" src="./js/main.js?v=0.8.1"></script>
 </body>
 </html>

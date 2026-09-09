@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { buildFantasy } from './fantasy-models.js?v=0.8.0';
+import { buildFantasy } from './fantasy-models.js?v=0.8.1';
 
 export function createFantasyCreature(root,kind,level){
   const model=buildFantasy(kind),count=kind==='dragon'?2:1,parts={};

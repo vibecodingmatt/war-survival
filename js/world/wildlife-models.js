@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { mergeRigidParts } from '../core/geometry.js?v=0.8.0';
+import { mergeRigidParts } from '../core/geometry.js?v=0.8.1';
 
 // Authored geometry, merged by animated joint and material. Two draws per species.
 // Birds have layered feathers; insects have segmented bodies, eyes and wing veins.

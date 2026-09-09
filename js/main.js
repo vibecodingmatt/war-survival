@@ -1,19 +1,19 @@
 import * as T from '../vendor/three.module.min.js';
-import { Simulation } from './core/simulation.js?v=0.8.0';
-import { createEnvironment } from './world/environment.js?v=0.8.0';
-import { createArmies } from './entities/army.js?v=0.8.0';
-import { createTargets } from './world/targets.js?v=0.8.0';
-import { createEffects } from './systems/effects.js?v=0.8.0';
-import { BattlefieldAudio } from './systems/audio.js?v=0.8.0';
-import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.8.0';
-import { clamp } from './core/math.js?v=0.8.0';
-import { BOSS_TYPES } from '../data/campaign.js?v=0.8.0';
-import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.8.0';
-import { POWERS } from '../data/powers.js?v=0.8.0';
-import { AMMO } from '../data/munitions.js?v=0.8.0';
-import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.8.0';
-import { activatePower, openChoice } from './core/encounters.js?v=0.8.0';
-import { collectSupply } from './core/munitions.js?v=0.8.0';
+import { Simulation } from './core/simulation.js?v=0.8.1';
+import { createEnvironment } from './world/environment.js?v=0.8.1';
+import { createArmies } from './entities/army.js?v=0.8.1';
+import { createTargets } from './world/targets.js?v=0.8.1';
+import { createEffects } from './systems/effects.js?v=0.8.1';
+import { BattlefieldAudio } from './systems/audio.js?v=0.8.1';
+import { BARRAGE_COOLDOWN, LIMITS, LEVELS, MAX_SQUAD } from '../data/waves.js?v=0.8.1';
+import { clamp } from './core/math.js?v=0.8.1';
+import { BOSS_TYPES } from '../data/campaign.js?v=0.8.1';
+import { createProgress, COMPLETE_MASK } from './core/progress.js?v=0.8.1';
+import { POWERS } from '../data/powers.js?v=0.8.1';
+import { AMMO } from '../data/munitions.js?v=0.8.1';
+import { createQualityGovernor, nextRenderTime } from './core/quality.js?v=0.8.1';
+import { activatePower, openChoice } from './core/encounters.js?v=0.8.1';
+import { collectSupply } from './core/munitions.js?v=0.8.1';
 
 const $=id=>document.getElementById(id);
 const show=(id,visible=true)=>$(id).classList.toggle('hidden',!visible);
@@ -83,8 +83,10 @@ $('how-to-play').addEventListener('click',()=>$('how-dialog').showModal());
 $('how-dialog').addEventListener('close',()=>$('how-to-play').focus());
 for(const [id,direction] of [['sectors-back',-1],['sectors-forward',1]])$(id).addEventListener('click',()=>levelSelect.scrollBy({left:direction*levelSelect.clientWidth*.75,behavior:reducedMotion?'instant':'smooth'}));
 function updateSectorArrows(){
-  $('sectors-back').disabled=levelSelect.scrollLeft<=1;
-  $('sectors-forward').disabled=levelSelect.scrollLeft+levelSelect.clientWidth>=levelSelect.scrollWidth-1;
+  const bounds=levelSelect.getBoundingClientRect();
+  // Scroll snapping includes the rail padding; use card edges to detect its ends.
+  $('sectors-back').disabled=levelSelect.firstElementChild.getBoundingClientRect().left>=bounds.left-1;
+  $('sectors-forward').disabled=levelSelect.lastElementChild.getBoundingClientRect().right<=bounds.right+1;
 }
 levelSelect.addEventListener('scroll',updateSectorArrows,{passive:true});
 new ResizeObserver(updateSectorArrows).observe(levelSelect);
@@ -271,11 +273,12 @@ function updateCompletions(){
   for(const button of document.querySelectorAll('[data-level]')){
     const index=Number(button.dataset.level),complete=progress.completed(index),allowed=progress.allowed(index);
     button.disabled=!allowed;
-    button.querySelector('small').textContent=complete?'COMPLETED ✓':allowed?'NEXT MISSION':'LOCKED · BEAT LEVEL '+(index);
+    button.querySelector('small').textContent=complete?'CLEARED ✓ · REPLAY':allowed?'NEXT MISSION':'LOCKED · BEAT LEVEL '+(index);
     button.setAttribute('aria-label','Level '+(index+1)+': '+LEVELS[index].name+'. '+button.querySelector('small').textContent);
     if(complete)cleared++;
   }
   $('campaign-progress').textContent=cleared+' / '+LEVELS.length+' CLEARED';
+  $('campaign-hint').querySelector('.touch-only').textContent=cleared?'Swipe to browse · Tap to replay':'Swipe or use arrows to browse';
 }
 document.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>selectLevel(Number(button.dataset.level))));
 document.querySelectorAll('[data-menu]').forEach(button=>button.addEventListener('click',()=>{

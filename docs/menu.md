@@ -1,4 +1,4 @@
-# Main menu · v0.8.0
+# Main menu · v0.8.1
 
 The menu prioritizes the game identity, the squad-versus-guardian encounter, and
 the next playable mission. New players see Play Now; returning players see
@@ -8,7 +8,12 @@ No progress or gameplay rules changed.
 The desktop composition places the title and deployment on the left and leaves
 the guardian visible on the right. Portrait phones use an upper artwork crop and
 a lower deployment area. Short landscape phones use two columns. The sector strip
-scrolls horizontally, with native touch scrolling and desktop navigation buttons.
+scrolls horizontally, with native touch scrolling and visible 44px navigation
+buttons on desktop and phones. A persistent swipe cue explains browsing and replay;
+cleared cards say “CLEARED ✓ · REPLAY.” Navigation buttons disable at the respective
+ends of the list. Browsing never changes the selected deployment until a card is
+chosen. These controls follow [W3C carousel guidance](https://www.w3.org/WAI/tutorials/carousels/styling/)
+to provide buttons alongside swipe gestures.
 It reveals the selected mission after shader compilation and on returning to the
 menu. Disabled sectors retain their prerequisite labels.
 
@@ -19,7 +24,9 @@ in `css/menu.css`; the battle HUD keeps its existing styles.
 
 Run `npm run test:menu` for eight viewport layouts, safe-area insets, overlapping
 regions, image loading, help focus, returning-save selection, replay and returning
-from battle. Screenshots are written under `test-results/menu/`. Also run the
+from battle, visible navigation targets, both scroll boundaries and native touch
+swipes. Returning-player screenshots are included. Screenshots are written under
+`test-results/menu/`. Also run the
 existing browser, mobile and polish suites for releases. Phone testing uses Chrome
 emulation, not physical iOS/Android devices.
 

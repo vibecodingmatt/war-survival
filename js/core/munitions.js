@@ -1,4 +1,4 @@
-import { AMMO, SUPPLIES, SUPPLY_DECK } from '../../data/munitions.js?v=0.8.0';
+import { AMMO, SUPPLIES, SUPPLY_DECK } from '../../data/munitions.js?v=0.8.1';
 
 export function nextSupply(sim){
   if(!sim.supplyBag.length){

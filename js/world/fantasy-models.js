@@ -1,5 +1,5 @@
 import * as T from '../../vendor/three.module.min.js';
-import { coloredMerge, surface } from './wildlife-models.js?v=0.8.0';
+import { coloredMerge, surface } from './wildlife-models.js?v=0.8.1';
 
 // Each silhouette is authored for one world. Four merged joints at most, no textures.
 export function buildFantasy(kind) {

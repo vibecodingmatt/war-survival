@@ -1,6 +1,6 @@
 import * as T from '../../vendor/three.module.min.js';
-import { SHOT_STYLES } from '../../data/munitions.js?v=0.8.0';
-import { mergeRigidParts } from '../core/geometry.js?v=0.8.0';
+import { SHOT_STYLES } from '../../data/munitions.js?v=0.8.1';
+import { mergeRigidParts } from '../core/geometry.js?v=0.8.1';
 
 export function createProjectiles(scene){
   const d=new T.Object3D(),dir=new T.Vector3(),up=new T.Vector3(0,1,0),color=new T.Color();
